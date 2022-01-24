@@ -20,7 +20,7 @@ export async function main(ns) {
 			if(ns.hasRootAccess(scan[i])){
 				ns.tprint("root Access");
 				ns.tprint(server["maxRam"]);
-				if(server["maxRam"]=8)		{threads=4}
+				if(server["maxRam"]=8)		{threads=3}
 				else if(server["maxRam"]=16){threads=6}
 				else if(server["maxRam"]=32){threads=4}
 				else if(server["maxRam"]=4)	{threads=1}
@@ -34,21 +34,25 @@ export async function main(ns) {
 			else if(ns.getHackingLevel()>=ns.getServerRequiredHackingLevel(scan[i])){
 				//how many ports are open
 				portsCount=0;
-				if(server["ftpPortOpen"] && ns.fileExists("ftp.exe")){
+				if(!server["ftpPortOpen"] && ns.fileExists("FTPCrack.exe")){
 					portsCount+=1;
 					ns.ftpcrack(scan[i]);
 				}
-				if(server["httpPortOpen"] && ns.fileExists("httpworm.exe")){
+				if(!server["httpPortOpen"] && ns.fileExists("HTTPWorm.exe")){
 					portsCount+=1;
 					ns.httpworm(scan[i]);
 				}
-				if(server["smtpPortOpen"] && ns.fileExists("smtp.exe")){
+				if(!server["smtpPortOpen"] && ns.fileExists("relaySMTP.exe")){
 					portsCount+=1;
-					ns.smtpPortOpen(scan[i]);
+					ns.relaysmtp(scan[i]);
 				}
-				if(server["sshPortOpen"] && ns.fileExists("BruteSSH.exe")){
+				if(!server["sshPortOpen"] && ns.fileExists("BruteSSH.exe")){
 					portsCount+=1;
 					ns.brutessh(scan[i]);
+				}
+				if(!server["sqlPortOpen"] && ns.fileExists("SQLInject.exe")){
+					portsCount+=1;
+					ns.sqlinject(scan[i]);
 				}
 				//can it be nuked
 				if(portsCount>=ns.getServerNumPortsRequired(scan[i])){
