@@ -1,8 +1,14 @@
 /** @param {NS} ns **/
+function delay(milliseconds){
+    return new Promise(resolve => {
+        setTimeout(resolve, milliseconds);
+    });
+}
 export async function main(ns) {
 	var count = 0;
-	while(count<1000){
+	while(count<100000){
 	count+=1;
+	await delay(1000);
 	var numNodes = ns.hacknet.numNodes();
 	var hacknetNewNode = ns.hacknet.getPurchaseNodeCost()
 	var RamUpgrade, CoreUpgrade, LevelUpgrade;
