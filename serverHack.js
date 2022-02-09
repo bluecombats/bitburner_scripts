@@ -5,15 +5,15 @@ function delay(milliseconds){
     });
 }
 export async function main(ns) {
-	var count = 0;
-	while(count<100000){
-		count+=1;
+	var count = 0,i;
+	var scan = ns.scan();
+	var server,portsCount,threads,ramLeft;
+	server = ns.getServer();
+	scan.push(server["hostname"]);
+	while(count<scan.length){
+		count = 0;
 		await delay(1000);
-		//ns.connect("home");
-		var scan = ns.scan();
-		//ns.tprint(scan);
-		var server,portsCount,threads;
-		for(var i in scan){
+		for(i=0; i<scan.length; i++){
 			//ns.tprint(scan[i]);
 			threads=1;
 			server = ns.getServer(scan[i]);
@@ -42,13 +42,16 @@ export async function main(ns) {
 			,"requiredHackingSkill":1
 			,"serverGrowth":5}*/
 			if(ns.hasRootAccess(scan[i])){
-				//ns.tprint("root Access");
-				//ns.tprint("maxRam: ",server["maxRam"]);
-				//ns.tprint("moneyAvailable: ",server["moneyAvailable"]);
-				if(server["maxRam"]=8)		{threads=3}
-				else if(server["maxRam"]=16){threads=6}
-				else if(server["maxRam"]=32){threads=4}
-				else if(server["maxRam"]=4)	{threads=1}
+				count+=1;
+				if(!ns.fileExists("serverHack.js",scan[i])){
+					await ns.scp("serverHack.js",scan[i]);
+					await ns.exec("serverHack.js",scan[i], 1);
+				}
+				ramLeft = server["maxRam"] - server["ramUsed"];
+				if(ramLeft>=32)		{threads=12}
+				else if(ramLeft>=16)	{threads=6}
+				else if(ramLeft>=8)	{threads=3}
+				else if(ramLeft>=4)	{threads=1}
 				if(!ns.fileExists("weakGrowHack.js",scan[i])){
 					await ns.scp("weakGrowHack.js",scan[i]);
 				}
@@ -58,19 +61,19 @@ export async function main(ns) {
 			}
 			else if(ns.getHackingLevel()>=ns.getServerRequiredHackingLevel(scan[i])){
 				//how many ports are open
-				if(!server["ftpPortOpen"] && ns.fileExists("FTPCrack.exe")){
+				if(!server["ftpPortOpen"] && ns.fileExists("FTPCrack.exe","home")){
 					ns.ftpcrack(scan[i]);
 				}
-				if(!server["httpPortOpen"] && ns.fileExists("HTTPWorm.exe")){
+				if(!server["httpPortOpen"] && ns.fileExists("HTTPWorm.exe","home")){
 					ns.httpworm(scan[i]);
 				}
-				if(!server["smtpPortOpen"] && ns.fileExists("relaySMTP.exe")){
+				if(!server["smtpPortOpen"] && ns.fileExists("relaySMTP.exe","home")){
 					ns.relaysmtp(scan[i]);
 				}
-				if(!server["sshPortOpen"] && ns.fileExists("BruteSSH.exe")){
+				if(!server["sshPortOpen"] && ns.fileExists("BruteSSH.exe","home")){
 					ns.brutessh(scan[i]);
 				}
-				if(!server["sqlPortOpen"] && ns.fileExists("SQLInject.exe")){
+				if(!server["sqlPortOpen"] && ns.fileExists("SQLInject.exe","home")){
 					ns.sqlinject(scan[i]);
 				}
 				//can it be nuked
