@@ -5,7 +5,7 @@ export async function main(ns) {
 	var servers = ns.scan();
 	servers.push(server);
 	var maxMoney=102;
-	var growCount;
+	var growCount, curSecLvl, minSecLvl;
 	while (maxMoney>100){
 		maxMoney=0;
 		for(var i=0; i<servers.length; i++){
@@ -17,11 +17,11 @@ export async function main(ns) {
 					maxMoney = ns.getServerMaxMoney(server);
 				}
 				//weaken
-				while((ns.getServerSecurityLevel(server)) 
-				> ns.getServerMinSecurityLevel(server)){
+				while((ns.getServerSecurityLevel(server)) > ns.getServerMinSecurityLevel(server)){
+					curSecLvl = ns.getServerSecurityLevel(server);
+					minSecLvl = ns.getServerMinSecurityLevel(server);
 					for(var j=1; j<MaxThreads;j++){
-						if((ns.getServerSecurityLevel(server) - ns.weakenAnalyze(j)) 
-						>= ns.getServerMinSecurityLevel(server)){
+						if((curSecLvl - ns.weakenAnalyze(j)) <= minSecLvl){
 							break;
 						}
 					}
@@ -31,11 +31,11 @@ export async function main(ns) {
 				while(ns.getServerMoneyAvailable(server)<ns.getServerMaxMoney(server) && growCount<100){
 					await ns.grow(server,{ threads: MaxThreads });
 					//weaken
-					while((ns.getServerSecurityLevel(server)) 
-					> ns.getServerMinSecurityLevel(server)){
+					while((ns.getServerSecurityLevel(server)) > ns.getServerMinSecurityLevel(server)){
+						curSecLvl = ns.getServerSecurityLevel(server);
+						minSecLvl = ns.getServerMinSecurityLevel(server);
 						for(var j=1; j<MaxThreads;j++){
-							if((ns.getServerSecurityLevel(server) - ns.weakenAnalyze(j)) 
-							>= ns.getServerMinSecurityLevel(server)){
+							if((curSecLvl - ns.weakenAnalyze(j)) <= minSecLvl){
 								break;
 							}
 						}
