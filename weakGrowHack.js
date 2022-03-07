@@ -12,7 +12,6 @@ export async function main(ns) {
 			server = servers[i];
 			if(server == "home"){continue}
 			growCount=0;
-			if(ns.hasRootAccess(server)){
 				if(ns.getServerMaxMoney(server)>100){
 					maxMoney = ns.getServerMaxMoney(server);
 				}
@@ -45,7 +44,6 @@ export async function main(ns) {
 				}
 				//hack
 				await ns.hack(server,{ threads: MaxThreads });
-			}
 		}
 	}
 }
