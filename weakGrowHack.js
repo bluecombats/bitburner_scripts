@@ -11,6 +11,7 @@ export async function main(ns) {
 		for(var i=0; i<servers.length; i++){
 			server = servers[i];
 			if(server == "home"){continue}
+			if(!ns.hasRootAccess(server)){continue}
 			growCount=0;
 				if(ns.getServerMaxMoney(server)>100){
 					maxMoney = ns.getServerMaxMoney(server);
