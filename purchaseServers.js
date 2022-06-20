@@ -29,6 +29,7 @@ export async function main(ns) {
 	var count = 0;
 	var i,j, pservers,server;
 	while(ns.getPurchasedServerLimit()>count){
+		delay(1000);
 		count = 0;
 		pservers = ns.getPurchasedServers();
 		ns.print(pservers);
