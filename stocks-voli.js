@@ -26,7 +26,10 @@ function Moneyformat(money){
 }
 export async function main(ns) {
 	var symbols = ns.stock.getSymbols();
-    var maxShares,i,smb,smbStr,preValue=[], currentValue=[], position=0, count=[];
+    var maxShares, i, smb, smbStr, minMoney=200000, preValue=[], currentValue=[], position=0, count=[];
+    for(i=0; i<symbols.length; i++){
+        count[i]=0;
+    }
     while(ns.getPlayer()["money"]>0){
         ns.print("money @ start: ",Moneyformat(ns.getPlayer()["money"]));
         await delay(3000);
@@ -34,9 +37,10 @@ export async function main(ns) {
             smb = symbols[i];
 		    smbStr = smb + "   ";
 		    smbStr = smbStr.substr(0,5);
+            //ns.print(smbStr," count: ",count[i]);
 			if(position==0){
 				preValue[i] = (ns.stock.getAskPrice(smb)+ns.stock.getBidPrice(smb))/2;
-				currentValue[i] = prevValue[i];
+				currentValue[i] = preValue[i];
 			}else{
 				currentValue[i] = (ns.stock.getAskPrice(smb)+ns.stock.getBidPrice(smb))/2;
 				position= -1;
@@ -46,7 +50,7 @@ export async function main(ns) {
             if(ns.stock.getPosition(smb)[0] == 0){
 				count[i]-=1;
                 //ask price is buy price, and bid price is sell price
-                if(ns.getPlayer()["money"]>(minMoney+100000) && count<-30){
+                if(ns.getPlayer()["money"]>(minMoney+100000) && count[i]<-30){
 					maxShares = (ns.getPlayer()["money"]-minMoney+100000)/ns.stock.getAskPrice(smb);
                     maxShares = Math.floor(maxShares);
                     if(maxShares>ns.stock.getMaxShares(smb)){
@@ -67,14 +71,14 @@ export async function main(ns) {
                 }
             }
             //else sell
-            if else(ns.stock.getPosition(smb)[0] > 0){
+            else if(ns.stock.getPosition(smb)[0] > 0){
 				count[i]+=1;
                 maxShares = ns.stock.getPosition(smb)[0];
                 ns.print(smbStr," Lpos: ",ns.stock.getPosition(smb)[0]
                     , " Gain: ", Moneyformat(ns.stock.getSaleGain(smb,maxShares,"Long")));
 				ns.print(smbStr," prev: ",Moneyformat(prevValue[i])," Curr: ",Moneyformat(currentValue[i])
 				," count: ",count[i]);
-                if(ns.stock.getSaleGain(smb,maxShares,"Long") > 0 && currentValue[i]<prevValue[i]
+                if(ns.stock.getSaleGain(smb,maxShares,"Long") > 0 && currentValue[i]<preValue[i]
 				&& count[i]>30){
                     //maxShares*ns.stock.getBidPrice(smb)
                     ns.print("sell ",smb," SaleGain: ",Moneyformat(ns.stock.getSaleGain(smb,maxShares,"Long")))
