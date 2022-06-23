@@ -26,13 +26,19 @@ function Moneyformat(money){
 }
 export async function main(ns) {
 	var symbols = ns.stock.getSymbols();
-    var maxShares, i, smb, smbStr, minMoney=200000, preValue=[], currentValue=[], position=0, count=[];
+    var maxShares, i, smb, smbStr, minMoney=200000, preValue=[], currentValue=[], position=0, count=[], rand;
     for(i=0; i<symbols.length; i++){
         count[i]=0;
     }
+    //ns.tprint(symbols.length," symbols length")
+    rand = Math.floor(Math.random()*(symbols.length-1));
     while(ns.getPlayer()["money"]>0){
         ns.print("money @ start: ",Moneyformat(ns.getPlayer()["money"]));
         await delay(3000);
+        if(ns.stock.getPosition(symbols[rand])[0] == 0){
+            rand = Math.round(Math.random()*(symbols.length-1));
+        }
+        ns.print("rand: ",rand," smb:",symbols[rand]);
         for(i=0; i<symbols.length; i++){
             smb = symbols[i];
 		    smbStr = smb + "   ";
@@ -46,11 +52,12 @@ export async function main(ns) {
 				position= -1;
 			}
             //ns.tprint(smbStr," long pos: ",ns.stock.getPosition(smb)[0]);
-            //if I have no long stocks, then buy       
-            if(ns.stock.getPosition(smb)[0] == 0){
-				count[i]-=1;
+            //if I have no long stocks, then buy
+            if(i == rand && ns.stock.getPosition(symbols[rand])[0]==0){				
                 //ask price is buy price, and bid price is sell price
-                if(ns.getPlayer()["money"]>(minMoney+100000) && count[i]<-30){
+                ns.print(Moneyformat(currentValue[i])," ",Moneyformat(preValue[i]))
+                if(ns.getPlayer()["money"]>(minMoney+100000) 
+                && currentValue[i]>preValue[i]){
 					maxShares = (ns.getPlayer()["money"]-minMoney+100000)/ns.stock.getAskPrice(smb);
                     maxShares = Math.floor(maxShares);
                     if(maxShares>ns.stock.getMaxShares(smb)){
@@ -63,7 +70,7 @@ export async function main(ns) {
                             break;
                         }
                     }
-                    ns.print(smbStr," MShares: ",j, " price: ",j*ns.stock.getAskPrice(smb));
+                    ns.print(smbStr," MShares: ",j, " price: ",Moneyformat(j*ns.stock.getAskPrice(smb)));
                     if((ns.getPlayer()["money"]-(j *ns.stock.getAskPrice(smb)))>(minMoney+100000) && j>10){
                         ns.print("buy ",smb, ": ",j);
                         ns.stock.buy(smb,j);
@@ -76,7 +83,7 @@ export async function main(ns) {
                 maxShares = ns.stock.getPosition(smb)[0];
                 ns.print(smbStr," Lpos: ",ns.stock.getPosition(smb)[0]
                     , " Gain: ", Moneyformat(ns.stock.getSaleGain(smb,maxShares,"Long")));
-				ns.print(smbStr," prev: ",Moneyformat(prevValue[i])," Curr: ",Moneyformat(currentValue[i])
+				ns.print(smbStr," prev: ",Moneyformat(preValue[i])," Curr: ",Moneyformat(currentValue[i])
 				," count: ",count[i]);
                 if(ns.stock.getSaleGain(smb,maxShares,"Long") > 0 && currentValue[i]<preValue[i]
 				&& count[i]>30){
