@@ -39,19 +39,35 @@ function curve(prev, cur, fut, price, ns){
     }else{
         ns.print("ERROR");
     }
+    linearLeastSq(ns,price)
+}
+function linearLeastSq(price){
+	var meanX,meanY,a,b,y=0,x=0,x2=0,xy=0,n,i
+	n=price.length;
+	for(i=0; i<price.length-1; i++){
+		x2+=Math.pow(price[i],2);
+		xy+=(i+1)*price[i];
+		x+=(i+1);
+		y+=price[i];
+	}
+	meanX=x/(price.length);
+	meanX=y/(price.length);
+	b = (xy*n - meanY*x)/(x2*n - meanX * x);
+	a = (meanY - b*meanX)/n;
+    ns.print("y = ",a,"x + ",Moneyformat(b))
 }
 export async function main(ns) {
 	var symbols = ns.stock.getSymbols();
-    var maxShares, i, j, smb, smbStr, minMoney=200000, priceValue=[], position=0, count=[], rand, prevRand;
+    var maxShares, i, j, smb, smbStr, minMoney=200000, priceValue=[], position=0, rand, prevRand, randCount=0;
     var prev, cur, fut, minLength = 20;
     for(i=0; i<symbols.length; i++){
         priceValue[i]=[];
-        count[i]=0;
         if(ns.stock.getPosition(symbols[i])[0]>0){
             rand = i;
+            randCount+=1;
         }
     }
-    if(!rand){
+    if(randCount == 0){
         rand = Math.floor(Math.random()*(symbols.length-1));
     }   
     while(ns.getPlayer()["money"]>0){
@@ -74,9 +90,8 @@ export async function main(ns) {
             }
             //ns.tprint(smbStr," long pos: ",ns.stock.getPosition(smb)[0]);
             //if I have no long stocks, then buy
-            if(i == rand && ns.stock.getPosition(symbols[rand])[0]==0 &&  priceValue[i].length > minLength){				
+            if(i == rand && ns.stock.getPosition(symbols[rand])[0]==0 && priceValue[i].length > minLength){				
                 //ask price is buy price, and bid price is sell price
-                ns.print(smbStr," count: ",count[i]);
                 curve(prev, cur, fut, priceValue[i], ns);
 
                 if(ns.getPlayer()["money"]>(minMoney+100000)  
@@ -102,46 +117,49 @@ export async function main(ns) {
             }
             //else sell
             else if(ns.stock.getPosition(smb)[0] > 0 && priceValue[i].length > minLength){
-				count[i]+=1;
                 maxShares = ns.stock.getPosition(smb)[0];
                 ns.print(smbStr," Lpos: ",ns.stock.getPosition(smb)[0]
                     , " Gain: ", Moneyformat(ns.stock.getSaleGain(smb,maxShares,"Long")));				
-                ns.print(smbStr," count: ",count[i]);
+                ns.print(smbStr," count: ",priceValue[i].length);
                 curve(prev, cur, fut, priceValue[i], ns);
 
                 //sell if gain > 0 and curve is negative and count > 30
                 if(ns.stock.getSaleGain(smb,maxShares,"Long") > 0 
                 && cur<prev
-				&& fut<cur && count[i]>30){
-                    //maxShares*ns.stock.getBidPrice(smb)
+				&& fut<cur && priceValue[i].length > minLength){
                     ns.print("sell ",smb," SaleGain: ",Moneyformat(ns.stock.getSaleGain(smb,maxShares,"Long")))
                     ns.stock.sell(smb, maxShares);
-					count[i]=0;
                 }
+            }
+            //keep price array per symbol 100 length, remove 1st value
+            if(priceValue[i].length > minLength){
+                priceValue[i].shift();
+                //ns.print(smbStr,priceValue[i].length);
             }
             //check for saddle points and reset array
             if(((cur < prev && fut > cur) || (cur > prev && fut < cur)) && priceValue[i].length > minLength){
-                if(cur < prev && fut > cur){
+                if(cur < prev && fut > cur && ns.stock.getPosition(smb)[0] == 0){
                     ns.print(smbStr,": low point, array rest");
                 }
-                if(cur > prev && fut < cur){
+                if(cur > prev && fut < cur && ns.stock.getPosition(smb)[0] == 0){
                     ns.print(smbStr,": high point, array rest");
                 }
-                priceValue[i] = [];
-                //ns.print(priceValue[i]);
+                if(ns.stock.getPosition(smb)[0] == 0){
+                    priceValue[i] = [];
+                }
             }
         }
         //rand is exisiting sym if exists, otherwise random
-        if(ns.stock.getPosition(symbols[rand])[0] == 0 && position == -1){
+        if(ns.stock.getPosition(symbols[rand])[0] == 0){
             prevRand = rand;
-            var randCount = 0;
+            randCount = 0;
             for(i=0; i<symbols.length; i++){
                 if(ns.stock.getPosition(symbols[i])[0]>0){
                     rand = i;
                     randCount+= 1;
                 }
              }
-            if(prevRand == rand && randCount == 0){
+            if(randCount == 0){
                 rand = Math.floor(Math.random()*(symbols.length-1));
             }
         }
