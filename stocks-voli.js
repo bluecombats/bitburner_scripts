@@ -51,7 +51,7 @@ function linearLeastSq(price){
 		y+=price[i];
 	}
 	meanX=x/(price.length);
-	meanX=y/(price.length);
+	meanY=y/(price.length);
 	b = (xy*n - meanY*x)/(x2*n - meanX * x);
 	a = (meanY - b*meanX)/n;
     ns.print("y = ",a,"x + ",Moneyformat(b))
