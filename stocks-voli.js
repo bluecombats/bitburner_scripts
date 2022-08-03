@@ -41,7 +41,7 @@ function curve(prev, cur, fut, price, ns){
     }
     linearLeastSq(ns,price)
 }
-function linearLeastSq(price){
+function linearLeastSq(ns,price){
 	var meanX,meanY,a,b,y=0,x=0,x2=0,xy=0,n,i
 	n=price.length;
 	for(i=0; i<price.length-1; i++){
