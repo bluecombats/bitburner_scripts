@@ -111,7 +111,7 @@ export async function main(ns) {
                     ns.print(smbStr," MShares: ",j, " price: ",Moneyformat(j*ns.stock.getAskPrice(smb)));
                     if((ns.getPlayer()["money"]-(j *ns.stock.getAskPrice(smb)))>(minMoney+100000) && j>10){
                         ns.print("buy ",smbStr, ": ",j);
-                        ns.stock.buy(smb,j);
+                        ns.stock.buyStock(smb,j);
                     }
                 }
             }
@@ -128,7 +128,7 @@ export async function main(ns) {
                 && cur<prev
 				&& fut<cur && priceValue[i].length > minLength){
                     ns.print("sell ",smb," SaleGain: ",Moneyformat(ns.stock.getSaleGain(smb,maxShares,"Long")))
-                    ns.stock.sell(smb, maxShares);
+                    ns.stock.sellStock(smb, maxShares);
                 }
             }
             //keep price array per symbol 100 length, remove 1st value
