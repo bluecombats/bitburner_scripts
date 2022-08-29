@@ -56,7 +56,7 @@ export async function main(ns) {
                         ns.print(smbStr," MShares: ",j, " price: ",j*ns.stock.getAskPrice(smb));
                         if((ns.getPlayer()["money"]-(j *ns.stock.getAskPrice(smb)))>(minMoney+100000) && j>10){
                             ns.print("buy ",smb, ": ",j);
-                            ns.stock.buy(smb,j);
+                            ns.stock.buyStock(smb,j);
                         }
                     }
                 }
@@ -69,7 +69,7 @@ export async function main(ns) {
                 if(ns.stock.getForecast(smb)<0.5 && ns.stock.getSaleGain(smb,maxShares,"Long") > 0){
                     //maxShares*ns.stock.getBidPrice(smb)
                     ns.print("sell ",smb," SaleGain: ",ns.stock.getSaleGain(smb,maxShares,"Long"))
-                    ns.stock.sell(smb, maxShares);
+                    ns.stock.sellStock(smb, maxShares);
                 }
             }
         }
