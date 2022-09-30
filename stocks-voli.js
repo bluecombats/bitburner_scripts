@@ -82,14 +82,16 @@ function findRand(ns,price,symbols,minLength){
 export async function main(ns) {
 	var symbols = ns.stock.getSymbols();
     var maxShares, i, j, smb, smbStr, minMoney=200000, priceValue=[], rand, randCount=0;
-    var minLength = 20,gain;
+    var minLength = 20,gain,gainArray=[],profit=[];
 
     for(i=0; i<symbols.length; i++){
         priceValue[i]=[];
+        gainArray[i]=[];
     }
     rand = findRand(ns,priceValue,symbols,minLength);
     while(ns.getPlayer()["money"]>0){
         await delay(1000*6);
+        var moneyGain=[];
         rand = findRand(ns,priceValue,symbols,minLength);
         ns.print("money @ start: ",Moneyformat(ns.getPlayer()["money"]));
         ns.print("syb length: ",priceValue[0].length," smb:",symbols[rand]);
@@ -100,12 +102,11 @@ export async function main(ns) {
             
             //position to work out curve using 3 points
 			priceValue[i].push((ns.stock.getAskPrice(smb)+ns.stock.getBidPrice(smb))/2);
-            //ns.tprint(smbStr," long pos: ",ns.stock.getPosition(smb)[0]);
             //if I have no long stocks, then buy
             gain = linearLeastSq(ns,priceValue[i]);
+            gainArray[i].push(gain[0]);
             if(i == rand && ns.stock.getPosition(symbols[rand])[0]==0 && priceValue[i].length > minLength){				
                 //ask price is buy price, and bid price is sell price
-
                 if(ns.getPlayer()["money"]>(minMoney+100000) && gain[0] >100){
 					maxShares = (ns.getPlayer()["money"]-minMoney+100000)/ns.stock.getAskPrice(smb);
                     maxShares = Math.floor(maxShares);
@@ -119,33 +120,51 @@ export async function main(ns) {
                         }
                     }
                     ns.print(smbStr," MShares: ",j, " price: ",Moneyformat(j*ns.stock.getAskPrice(smb)));
+                    var buyMoney = j * ns.stock.getAskPrice(smb);
                     if((ns.getPlayer()["money"]-(j *ns.stock.getAskPrice(smb)))>(minMoney+100000) && j>10){
                         ns.print("buy ",smbStr, ": ",j);
                         ns.stock.buyStock(smb,j);
+                        moneyGain[0]=buyMoney;
+                        moneyGain[1]=gain[0];
+                        profit=[];
+                        ns.clearPort(2);
+                        ns.print(moneyGain.toString());
+                        ns.writePort(2,moneyGain.toString());
+                        randCount=0;
                     }
                 }
             }
             //else sell
-            else if(ns.stock.getPosition(smb)[0] > 0 && priceValue[i].length > minLength){
+            else if(ns.stock.getPosition(smb)[0] > 0 
+            && priceValue[i].length > minLength){
+                moneyGain = (ns.peek(2)).split(",");
+                profit.push((ns.stock.getSaleGain(smb,maxShares,"Long") / moneyGain[0]-1)*100);
+                //ns.print(moneyGain.toString());
                 maxShares = ns.stock.getPosition(smb)[0];
                 ns.print(smbStr," Lpos: ",ns.stock.getPosition(smb)[0]
-                    , " MaxGain: ", Moneyformat(ns.stock.getSaleGain(smb,maxShares,"Long"))
-                    ," gain ax: ",gain[0], " b: ",gain[1]);				
-                ns.print(smbStr," count: ",priceValue[i].length);
+                    , " MaxGain: ", Moneyformat(ns.stock.getSaleGain(smb,maxShares,"Long")));
+                ns.print("org gain ax: ",Math.floor(moneyGain[1]*100)/100
+                    ," org money: ",Moneyformat(moneyGain[0]));
+                ns.print("gain ax:     ",Math.floor(gain[0]*100)/100, " b: ",Math.floor(gain[1]*100)/100);
+                ns.print("%: ",profit[profit.length-1]," max %: ",Math.max.apply(Math,profit));
+                ns.print(smbStr," count: ",priceValue[i].length, " keep for: ",randCount);
 
                 //sell if gain > 0 and curve is negative and count > 30
-                if(ns.stock.getSaleGain(smb,maxShares,"Long") > 0 && priceValue[i].length > minLength
-                && gain[0] <50){
+                if(ns.stock.getSaleGain(smb,maxShares,"Long")>0 &&
+                priceValue[i].length > minLength && randCount > 30
+                && (ns.stock.getSaleGain(smb,maxShares,"Long") / moneyGain[0]) > 1){
                     ns.print("sell ",smb," SaleGain: ",Moneyformat(ns.stock.getSaleGain(smb,maxShares,"Long")))
                     ns.stock.sellStock(smb, maxShares);
+                    ns.clearPort(2);
                 }
             }
             //keep price array per symbol 100 length, remove 1st value
             if(priceValue[i].length > minLength){
                 priceValue[i].shift();
-                //ns.print(smbStr,priceValue[i].length);
+                gainArray[i].shift();
             }
         }
+        randCount+=1;
         //ns.print("money @ end: ",Moneyformat(ns.getPlayer()["money"]));
     }
 }
