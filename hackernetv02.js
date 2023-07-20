@@ -28,7 +28,7 @@ function Moneyformat(money){
 }
 export async function main(ns) {
 	//requires formulas.exe
-	var count = 0;
+	var count = 0,i;
 	var hackNetConstants = ns.formulas.hacknetNodes.constants();
 	//ns.tprint(hackNetConstants);
 	/*"MoneyGainPerLevel":1.5
@@ -59,17 +59,18 @@ export async function main(ns) {
 	var ramMulti = mults['hacknet_node_ram_cost'];
 	var coreMulti = mults["hacknet_node_core_cost"];
 	var levelMulti = mults["hacknet_node_level_cost"];
-	var numNodes = ns.hacknet.numNodes();
-	var ramUpgrade, coreUpgrade, levelUpgrade, levelMoneyGain, ramMoneyGain, coreMoneyGain;
-	var ramMin, coreMin, levelMin, hacknetNewNode;
+	var num_nodes = ns.hacknet.numNodes();
+	var ram_upgrade, core_upgrade, level_upgrade, level_money_gain, ram_money_gain, core_money_gain;
+	var ram_min, core_min, level_min, hacknetNewNode;
 	while(count<100000){
 		count+=1;
 		await delay(1000);
-		if(numNodes == 0){
+		if(num_nodes == 0){
 			ns.hacknet.purchaseNode();
 		}
+		num_nodes = ns.hacknet.numNodes();
 		hacknetNewNode = ns.hacknet.getPurchaseNodeCost();
-		for(var i=0; i<numNodes; i++){
+		for(i=0; i<num_nodes; i++){
 			//ns.tprint(i);
 			//ns.tprint(ns.hacknet.getNodeStats(i));
 			/*{"name":"hacknet-node-0"
@@ -79,86 +80,85 @@ export async function main(ns) {
 			,"production":1.6082030281605149
 			,"timeOnline":1993.8000000002573
 			,"totalProduction":3206.4351975468476}*/
-			levelUpgrade = ns.formulas.hacknetNodes.levelUpgradeCost(
+			level_upgrade = ns.formulas.hacknetNodes.levelUpgradeCost(
 				ns.hacknet.getNodeStats(i)["level"]
 				,1
 				,levelMulti
 			);
-			levelMoneyGain = ns.formulas.hacknetNodes.moneyGainRate(
+			level_money_gain = ns.formulas.hacknetNodes.moneyGainRate(
 				ns.hacknet.getNodeStats(i)["level"]+1
 				,ns.hacknet.getNodeStats(i)["ram"]
 				,ns.hacknet.getNodeStats(i)["cores"]
 				,purchaseMulti
 			);
-			ramUpgrade = ns.formulas.hacknetNodes.ramUpgradeCost(
+			ram_upgrade = ns.formulas.hacknetNodes.ramUpgradeCost(
 				ns.hacknet.getNodeStats(i)["ram"]
 				,1
 				,ramMulti
 			);
-			ramMoneyGain = ns.formulas.hacknetNodes.moneyGainRate(
+			ram_money_gain = ns.formulas.hacknetNodes.moneyGainRate(
 				ns.hacknet.getNodeStats(i)["level"]
 				,ns.hacknet.getNodeStats(i)["ram"]+1
 				,ns.hacknet.getNodeStats(i)["cores"]
 				,purchaseMulti
 			);
-			coreUpgrade = ns.formulas.hacknetNodes.coreUpgradeCost(
+			core_upgrade = ns.formulas.hacknetNodes.coreUpgradeCost(
 				ns.hacknet.getNodeStats(i)["cores"]
 				,1
 				,coreMulti
 			);
-			coreMoneyGain = ns.formulas.hacknetNodes.moneyGainRate(
+			core_money_gain = ns.formulas.hacknetNodes.moneyGainRate(
 				ns.hacknet.getNodeStats(i)["level"]
 				,ns.hacknet.getNodeStats(i)["ram"]
 				,ns.hacknet.getNodeStats(i)["cores"]+1
 				,purchaseMulti
 			);
 			ns.print(i," level:",ns.hacknet.getNodeStats(i)["level"]
-			," upgrade: ",Moneyformat(levelUpgrade)
-			," gain: ",Moneyformat(levelMoneyGain - ns.hacknet.getNodeStats(i)["production"])
-			," %: ",levelUpgrade/(levelMoneyGain - ns.hacknet.getNodeStats(i)["production"]));
+			," upgrade: ",Moneyformat(level_upgrade)
+			," gain: ",Moneyformat(level_money_gain - ns.hacknet.getNodeStats(i)["production"])
+			," %: ",level_upgrade/(level_money_gain - ns.hacknet.getNodeStats(i)["production"]));
 			ns.print(i," ram:",ns.hacknet.getNodeStats(i)["ram"]
-			," upgrade: ",Moneyformat(ramUpgrade)
-			," gain: ",Moneyformat(ramMoneyGain - ns.hacknet.getNodeStats(i)["production"])
-			," %: ", ramUpgrade/(ramMoneyGain - ns.hacknet.getNodeStats(i)["production"]));
+			," upgrade: ",Moneyformat(ram_upgrade)
+			," gain: ",Moneyformat(ram_money_gain - ns.hacknet.getNodeStats(i)["production"])
+			," %: ", ram_upgrade/(ram_money_gain - ns.hacknet.getNodeStats(i)["production"]));
 			ns.print(i," cores:",ns.hacknet.getNodeStats(i)["cores"]
-			," upgrade ",Moneyformat(coreUpgrade)
-			," gain ",Moneyformat(coreMoneyGain - ns.hacknet.getNodeStats(i)["production"])
-			," %: ",coreUpgrade/(coreMoneyGain - ns.hacknet.getNodeStats(i)["production"]));
+			," upgrade ",Moneyformat(core_upgrade)
+			," gain ",Moneyformat(core_money_gain - ns.hacknet.getNodeStats(i)["production"])
+			," %: ",core_upgrade/(core_money_gain - ns.hacknet.getNodeStats(i)["production"]));
 			if(i==0){
-				ramMin = ramUpgrade;
-				coreMin = coreUpgrade;
-				levelMin = levelUpgrade;
+				ram_min = ram_upgrade;
+				core_min = core_upgrade;
+				level_min = level_upgrade;
 			}
-			if(ramUpgrade < hacknetNewNode*10 && 
-			ns.getServerMoneyAvailable("home")> ramUpgrade &&
-			ramMin >= ramUpgrade){
+			if(ram_upgrade < hacknetNewNode*10 && 
+			ns.getServerMoneyAvailable("home")> ram_upgrade &&
+			ram_min >= ram_upgrade){
 				ns.hacknet.upgradeRam(i,1);
-				ramUpgrade = ns.hacknet.getRamUpgradeCost(i,1);
+				ram_upgrade = ns.hacknet.getRamUpgradeCost(i,1);
 				ns.print("node ",i," upgraded ram");
 			}
-			else if(coreUpgrade < hacknetNewNode*10 && 
-			ns.getServerMoneyAvailable("home")>coreUpgrade &&
-			coreMin >= coreUpgrade){
+			else if(core_upgrade < hacknetNewNode*10 && 
+			ns.getServerMoneyAvailable("home")>core_upgrade &&
+			core_min >= core_upgrade){
 				ns.hacknet.upgradeCore(i,1);
-				coreUpgrade = ns.hacknet.getCoreUpgradeCost(i,1);
+				core_upgrade = ns.hacknet.getCoreUpgradeCost(i,1);
 				ns.print("node ",i," upgraded core");
 			}
-			else if(levelUpgrade < hacknetNewNode && 
-			ns.getServerMoneyAvailable("home")> levelUpgrade &&
-			levelMin >= levelUpgrade){
+			else if(level_upgrade < hacknetNewNode && 
+			ns.getServerMoneyAvailable("home")> level_upgrade &&
+			level_min >= level_upgrade){
 				ns.hacknet.upgradeLevel(i,1);
-				levelUpgrade = ns.hacknet.getLevelUpgradeCost(i,1);
+				level_upgrade = ns.hacknet.getLevelUpgradeCost(i,1);
 				ns.print("node ",i," upgraded level");
 			}
-			else if(i == (numNodes-1) 
+			else if(i == (num_nodes-1) 
 			&& ns.getServerMoneyAvailable("home")> hacknetNewNode &&
-			ramUpgrade > hacknetNewNode*10 &&
-		 	coreUpgrade >hacknetNewNode*10 && 
-		 	levelUpgrade > hacknetNewNode){
+			ram_upgrade > hacknetNewNode*10 &&
+		 	core_upgrade >hacknetNewNode*10 && 
+		 	level_upgrade > hacknetNewNode){
 				ns.hacknet.purchaseNode();
 				ns.print("new node purchased");
 			}
 		}
-		numNodes = ns.hacknet.numNodes();
 	}
 }
