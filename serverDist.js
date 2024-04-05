@@ -94,7 +94,8 @@ export async function main(ns) {
 	var count=0,i,j,server,total_growth,threads;
 	var servers = ns.scan();
 	var current_server= ns.args[0];
-	var files = ["weakOnly0.js","growOnly0.js","hackOnly0.js","serverDist.js"]
+	var files = ["weakOnly0.js","growOnly0.js","hackOnly0.js","serverDist.js"];
+	var serverDist = files[3];
 	servers.push(current_server);
 	ns.tprint(servers);
 	//list contracts
@@ -108,7 +109,7 @@ export async function main(ns) {
 			//ns.tprint(server);
 			threads=1;
 			for(j=0;j<files.length;j++){
-				if(files[j]!="serverDist.js"){
+				if(files[j]!=serverDist){
 					if(!ns.fileExists(files[j],server)){
 						await ns.scp(files[j],server,current_server);
 					}
@@ -117,9 +118,9 @@ export async function main(ns) {
 			ns.print(server," admin access? ",ns.getServer(server)["hasAdminRights"]);
 			if(ns.getServer(server)["hasAdminRights"]){
 				count+=1;
-				if(!ns.fileExists("serverDist.js",server,current_server)){
-					await ns.scp("serverDist.js",server);
-					await ns.exec("serverDict.js",server, 1, server);
+				if(!ns.fileExists(serverDist,server,current_server)){
+					await ns.scp(serverDist,server);
+					await ns.exec(serverDist,server, 1, server);
 				}
 				ns.print("run dist files");
 				await max_ram_run_weak_js(ns,server);
