@@ -60,7 +60,7 @@ function goal_for_node(ns, level_per, ram_per, core_per, cache_per, node){
 }
 export async function main(ns) {
 	//requires formulas.exe
-	var count = 0,i=0;
+	var count = 0,i=0,delay_time=0.25;
 	var hackServerConstants = ns.formulas.hacknetServers.constants();
 	/*"HashesPerLevel":0.001,
 	"BaseCost":50000,
@@ -96,8 +96,14 @@ export async function main(ns) {
 	while(count<100000){
 		count+=1;
 		hacknetProduction = 0;
+		hacknetNewNode = ns.hacknet.getPurchaseNodeCost();
 		if(num_nodes == 0){
 			ns.hacknet.purchaseNode();
+		}
+		if(ns.hacknet.numNodes() == 0){
+			ns.print(`no nodes, can't afford ${Moneyformat(hacknetNewNode)} yet`)
+			await delay(1000*0.25);
+			continue;
 		}
 		nodes_data=[];
 		num_nodes = ns.hacknet.numNodes();
@@ -159,13 +165,13 @@ export async function main(ns) {
 				,purchaseMulti
 			);
 			new_node_data.level_per = new_node_data.level_upgrade/
-				new_node_data.level_hash_gain //- ns.hacknet.getNodeStats(i)["production"]);
+				(new_node_data.level_hash_gain - ns.hacknet.getNodeStats(i)["production"]);
 			new_node_data.ram_per = new_node_data.ram_upgrade/
-				new_node_data.ram_hash_gain //- ns.hacknet.getNodeStats(i)["production"]);
+				(new_node_data.ram_hash_gain - ns.hacknet.getNodeStats(i)["production"]);
 			new_node_data.core_per = new_node_data.core_upgrade/
-				new_node_data.core_hash_gain //- ns.hacknet.getNodeStats(i)["production"]);
+				(new_node_data.core_hash_gain - ns.hacknet.getNodeStats(i)["production"]);
 			new_node_data.cache_per = new_node_data.cache_upgrade/
-				new_node_data.cache_hash_gain //- ns.hacknet.getNodeStats(i)["production"]);
+				(new_node_data.cache_hash_gain - ns.hacknet.getNodeStats(i)["production"]);
 			new_node_data.goal_value = goal_value_for_node(ns
 				, new_node_data.level_per
 				, new_node_data.ram_per
@@ -238,22 +244,36 @@ export async function main(ns) {
 			}
 		}
 		ns.print("Total production per second ", hacknetProduction);
+		ns.print("hashs: ", ns.hacknet.hashCapacity(),"/",ns.hacknet.numHashes());
 		//sell hashes
 		//ns.tprint("hash upgrades",ns.hacknet.getHashUpgrades());
 		/*"Sell for Money",
 		"Sell for Corporation Funds",
 		"Reduce Minimum Security",
 		"Increase Maximum Money",
-		"Improve Studying",
+		"Improve Studying",9
 		"Improve Gym Training",
 		"Exchange for Corporation Research",
 		"Exchange for Bladeburner Rank",
 		"Exchange for Bladeburner SP",
 		"Generate Coding Contract",
 		"Company Favor"*/
+		ns.print(`price for hashes to money ${ns.hacknet.hashCost("Sell for Money")}`);
+		ns.print("buy ",(Math.ceil(
+			(hacknetProduction/
+			ns.hacknet.hashCost("Sell for Money")
+			)*delay_time)));
 		if(ns.hacknet.numHashes() == ns.hacknet.hashCapacity()){
-			ns.hacknet.spendHashes("Sell for Money")
+			ns.hacknet.spendHashes(
+				"Sell for Money",
+				"home",
+				Math.ceil(
+					(hacknetProduction/
+					ns.hacknet.hashCost("Sell for Money")
+					)*delay_time
+				)
+			);
 		}
-		await delay(1000*0.25);
+		await delay(1000*delay_time);
 	}
 }
