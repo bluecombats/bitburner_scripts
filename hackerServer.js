@@ -26,7 +26,7 @@ function Moneyformat(money){
         return "$"+String(money);
     }
 }
-function goal_value_for_node(ns, level_per, ram_per, core_per, cache_per, node){
+function goal_value_for_node(ns, level_per, ram_per, core_per, node){
 	var goal_value = Math.min(level_per, ram_per, core_per), goal;
 	if(goal_value == level_per){
 		goal="level";
@@ -34,15 +34,13 @@ function goal_value_for_node(ns, level_per, ram_per, core_per, cache_per, node){
 		goal="ram";
 	}else if(goal_value == core_per){
 		goal="core"
-	}else if(goal_value == cache_per){
-		goal="cache"
 	}else{
 		goal= "ERROR"
 	}
 	ns.print("GOAL for node: "+node+" is: ",goal.toUpperCase()," value: ",goal_value.toFixed(3));
 	return goal_value
 }
-function goal_for_node(ns, level_per, ram_per, core_per, cache_per, node){
+function goal_for_node(ns, level_per, ram_per, core_per, node){
 	var goal_value = Math.min(level_per, ram_per, core_per), goal;
 	if(goal_value == level_per){
 		goal="level";
@@ -50,8 +48,6 @@ function goal_for_node(ns, level_per, ram_per, core_per, cache_per, node){
 		goal="ram";
 	}else if(goal_value == core_per){
 		goal="core"
-	}else if(goal_value == cache_per){
-		goal="cache"
 	}else{
 		goal= "ERROR"
 	}
@@ -157,36 +153,41 @@ export async function main(ns) {
 				ns.hacknet.getNodeStats(i)["cache"]
 				,1
 			);
-			new_node_data.cache_hash_gain= ns.formulas.hacknetServers.hashGainRate(
-				ns.hacknet.getNodeStats(i)["level"]
-				,usedRam
-				,ns.hacknet.getNodeStats(i)["ram"]
-				,ns.hacknet.getNodeStats(i)["cores"]
-				,purchaseMulti
-			);
+			// new_node_data.cache_hash_gain= ns.formulas.hacknetServers.hashGainRate(
+			// 	ns.hacknet.getNodeStats(i)["level"]
+			// 	,usedRam
+			// 	,ns.hacknet.getNodeStats(i)["ram"]
+			// 	,ns.hacknet.getNodeStats(i)["cores"]
+			// 	,purchaseMulti
+			// );
 			new_node_data.level_per = new_node_data.level_upgrade/
 				(new_node_data.level_hash_gain - ns.hacknet.getNodeStats(i)["production"]);
 			new_node_data.ram_per = new_node_data.ram_upgrade/
 				(new_node_data.ram_hash_gain - ns.hacknet.getNodeStats(i)["production"]);
 			new_node_data.core_per = new_node_data.core_upgrade/
 				(new_node_data.core_hash_gain - ns.hacknet.getNodeStats(i)["production"]);
-			new_node_data.cache_per = new_node_data.cache_upgrade/
-				(new_node_data.cache_hash_gain - ns.hacknet.getNodeStats(i)["production"]);
+			// new_node_data.cache_per = new_node_data.cache_upgrade/
+			// 	(new_node_data.cache_hash_gain - ns.hacknet.getNodeStats(i)["production"]);
 			new_node_data.goal_value = goal_value_for_node(ns
 				, new_node_data.level_per
 				, new_node_data.ram_per
 				, new_node_data.core_per
-				, new_node_data.cache_per
+				//, new_node_data.cache_per
 				, i);
 			new_node_data.goal = goal_for_node(ns
 				, new_node_data.level_per
 				, new_node_data.ram_per
 				, new_node_data.core_per
-				, new_node_data.cache_per
+				//, new_node_data.cache_per
 				, i);
 			//ns.print(new_node_data);
 			nodes_data.push(new_node_data);
-			hacknetProduction += ns.hacknet.getNodeStats(i)["production"]; 
+			hacknetProduction += ns.hacknet.getNodeStats(i)["production"];
+			//buy cache
+			if(new_node_data.level_upgrade > new_node_data.cache_upgrade &&
+			ns.getServerMoneyAvailable("home") > new_node_data.cache_upgrade){
+				ns.hacknet.upgradeCache(i,1);
+			}
 		}
 		//sort nodes_data to get the best to upgrade
 		nodes_data.sort(function (a, b) { return a.goal_value - b.goal_value });
@@ -214,9 +215,9 @@ export async function main(ns) {
 		}else if(nodes_data[0]["goal"]=="core" &&
 			ns.getServerMoneyAvailable("home") > nodes_data[0]["core_upgrade"]){
 				ns.hacknet.upgradeCore(nodes_data[0]["node"],1)
-		}else if(nodes_data[0]["goal"]=="cache" &&
-			ns.getServerMoneyAvailable("home") > nodes_data[0]["cache_upgrade"]){
-				ns.hacknet.upgradeCache(nodes_data[0]["node"],1)
+		// }else if(nodes_data[0]["goal"]=="cache" &&
+		// 	ns.getServerMoneyAvailable("home") > nodes_data[0]["cache_upgrade"]){
+		// 		ns.hacknet.upgradeCache(nodes_data[0]["node"],1)
 		}
 		//decision to buy new node
 		//sort by levels
@@ -258,22 +259,6 @@ export async function main(ns) {
 		"Exchange for Bladeburner SP",
 		"Generate Coding Contract",
 		"Company Favor"*/
-		ns.print(`price for hashes to money ${ns.hacknet.hashCost("Sell for Money")}`);
-		ns.print("buy ",(Math.ceil(
-			(hacknetProduction/
-			ns.hacknet.hashCost("Sell for Money")
-			)*delay_time)));
-		if(ns.hacknet.numHashes() == ns.hacknet.hashCapacity()){
-			ns.hacknet.spendHashes(
-				"Sell for Money",
-				"home",
-				Math.ceil(
-					(hacknetProduction/
-					ns.hacknet.hashCost("Sell for Money")
-					)*delay_time
-				)
-			);
-		}
 		await delay(1000*delay_time);
 	}
 }
