@@ -1,28 +1,57 @@
 /** @param {NS} ns **/
-function delay(milliseconds){
-    return new Promise(resolve => {
-        setTimeout(resolve, milliseconds);
-    });
-}
+// function delay(milliseconds){
+//     return new Promise(resolve => {
+//         setTimeout(resolve, milliseconds);
+//     });
+// }
 function moneyFormat(ns,money){
-    var moneySplit;
+    var moneySplit, return_string;
     if(Math.abs(money/Math.pow(10,12)) >1){
-        moneySplit = money/Math.pow(10,12);
-        return "$"+String(moneySplit).substring(0,7)+"tr";
+        moneySplit = Math.abs(money)/Math.pow(10,12);
+        return_string= String(moneySplit).substring(0,6)+"tr";
     }
     else if(Math.abs(money/Math.pow(10,9)) >1){
-        moneySplit = money/Math.pow(10,9);
-        return "$"+String(moneySplit).substring(0,7)+"bn";
+        moneySplit = Math.abs(money)/Math.pow(10,9);
+        return_string=String(moneySplit).substring(0,6)+"bn";
     }else if(Math.abs(money/Math.pow(10,6)) >1){
-        moneySplit = money/Math.pow(10,6);
-        return "$"+String(moneySplit).substring(0,7)+"m";
+        moneySplit = Math.abs(money)/Math.pow(10,6);
+        return_string=String(moneySplit).substring(0,7)+"m";
     }else if(Math.abs(money/Math.pow(10,3)) >1){
-        moneySplit = money/Math.pow(10,3);
-        return "$"+String(moneySplit).substring(0,7)+"k";
+        moneySplit = Math.abs(money)/Math.pow(10,3);
+        return_string=String(moneySplit).substring(0,7)+"k";
     }
     else{
-        return "$"+String(money);
+        return_string=String(Math.abs(money));
     }
+		if(Math.sign(money)==1 || Math.sign(money)==0){
+			return_string= " $"+return_string;
+		}else{
+			return_string= "-$"+return_string;
+		}
+		return_string
+		return return_string
+}
+function percFormat(ns,perc){
+	//make sure it is of the form:
+	// +0#.##%
+	// -0#.##%
+	let perc_string,per_decimals;
+	if(Math.abs(perc/Math.pow(10,1)) >1){
+		perc_string = Math.abs(Math.trunc(perc));
+	}else{
+		perc_string = "0"+Math.abs(Math.trunc(perc));
+	}
+	per_decimals = Math.trunc(Math.abs(perc-Math.trunc(perc))*100);
+	if((per_decimals/Math.pow(10,1)) <1){
+		per_decimals="0"+per_decimals;
+	}
+	perc_string+= "."+String(per_decimals).substring(0,2)+"%";
+	if(Math.sign(perc)==1){
+		perc_string=" "+perc_string;
+	}else{
+		perc_string="-"+perc_string;
+	}
+	return perc_string;
 }
 function generateRand(ns,symbols){
     var rand, randCount=0,salesGain=0,i,maxShares,maxForecast=0;
@@ -55,25 +84,21 @@ export async function main(ns) {
 	let maxShares,i,smb,smbStr,minMoney=200000,rand,orders,position,total_cost,sales_gain;
 	rand = generateRand(ns,symbols);
 	while(ns.getPlayer()["money"]>0){
-		ns.print("money @ start: ",moneyFormat(ns,ns.getPlayer()["money"]));
 		await ns.stock.nextUpdate();
+		ns.print("money @ start: ",moneyFormat(ns,ns.getPlayer()["money"]));
 		for(i=0; i<symbols.length; i++){
 			smb = symbols[i];
 			smbStr = smb + "   ";
 			smbStr = smbStr.substring(0,5);
 			position = ns.stock.getPosition(smb);
-			//if I have no long stocks, then buy if vol <=1.5 forecast is >0.6 and I can afford it
-			maxShares = (ns.getPlayer()["money"]-minMoney+stock_con["StockMarketCommission"])/ns.stock.getAskPrice(smb);
+			maxShares = (ns.getPlayer()["money"]-minMoney-stock_con["StockMarketCommission"])/ns.stock.getAskPrice(smb);
 			maxShares = Math.floor(maxShares);
 			if(maxShares>ns.stock.getMaxShares(smb)){
 				maxShares = ns.stock.getMaxShares(smb);
 			}
-			// ns.print(`${smbStr} Pur: ${moneyFormat(ns,ns.stock.getPurchaseCost(smb,maxShares,"Long"))}`+
-			// ` Sale: ${moneyFormat(ns,ns.stock.getSaleGain(smb,maxShares,"Long"))}`);
-			if(position[0] == 0 && ns.stock.getVolatility(smb)<=1.5 && ns.stock.getForecast(smb)>0.60 &&
-			ns.getPlayer()["money"]>ns.stock.getPurchaseCost(smb,maxShares,"Long") &&
-			ns.stock.getSaleGain(smb,maxShares,"Long")>0){
-				// ns.print(smbStr," MaxShares: ",ns.stock.getMaxShares(smb)," calcMaxShares: ",maxShares);
+			//if I have no long stocks, then buy if vol <=1.5 forecast is >0.6 and I can afford it
+			if(position[0] == 0 && ns.stock.getVolatility(smb)<=0.012 && ns.stock.getForecast(smb)>0.60 &&
+				ns.getPlayer()["money"]>(stock_con["StockMarketCommission"] +minMoney)){
 				for(var j=maxShares;maxShares>0;j--){
 					//ns.print(smb," ",j);
 					if((ns.getPlayer()["money"]-(j *ns.stock.getAskPrice(smb)))>(
@@ -94,10 +119,16 @@ export async function main(ns) {
 				total_cost = position[0]*position[1];
 				sales_gain = ns.stock.getSaleGain(smb, position[0],"Long");
 				// sales_gain+= position[2]*position[3] - ns.stock.getSaleGain(smb,0,"Short");
-				ns.print(smbStr," for: ",String(ns.stock.getForecast(smb)).substring(0,4)
-					," Total: ",moneyFormat(ns,total_cost)
-					," Profit: ",moneyFormat(ns,(sales_gain-total_cost)+stock_con["StockMarketCommission"])
-					," Gain: ", moneyFormat(ns,sales_gain)
+				let profit = (sales_gain-total_cost)+stock_con["StockMarketCommission"];
+				let profit_perc = (profit/total_cost)*100;
+				ns.print(smbStr
+					," for:  ",percFormat(ns, ns.stock.getForecast(smb)*100)
+					,"  vol:  ",percFormat(ns, ns.stock.getVolatility(smb)*100)
+					,"  Total: ",moneyFormat(ns, total_cost)
+					,"  Profit: ",moneyFormat(ns, profit)
+					,"  ",percFormat(ns, profit_perc)
+					,"  Gain: ", moneyFormat(ns,sales_gain)
+					,"  shares: ",position[0]
 				);
 				if(ns.stock.getForecast(smb)<0.5 && sales_gain > 0){
 					ns.print("sell ",smb," SaleGain: ",moneyFormat(ns,sales_gain));
