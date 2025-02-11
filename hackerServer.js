@@ -4,26 +4,26 @@ function delay(milliseconds){
         setTimeout(resolve, milliseconds);
     });
 }
-function Moneyformat(money){
+function numberFormat(x){
     var moneySplit;
-    if(Math.abs(money/Math.pow(10,12)) >1){
-        moneySplit = money/Math.pow(10,12);
-        return "$"+String(moneySplit).substring(0,7)+"tr";
+    if(Math.abs(x/Math.pow(10,12)) >1){
+        moneySplit = x/Math.pow(10,12);
+        return String(moneySplit).substring(0,6)+"tr";
     }
-    else if(Math.abs(money/Math.pow(10,9)) >1){
-        moneySplit = money/Math.pow(10,9);
-        return "$"+String(moneySplit).substring(0,7)+"bn";
-    }else if(Math.abs(money/Math.pow(10,6)) >1){
-        moneySplit = money/Math.pow(10,6);
-        return "$"+String(moneySplit).substring(0,7)+"m";
-    }else if(Math.abs(money/Math.pow(10,3)) >1){
-        moneySplit = money/Math.pow(10,3);
-        return "$"+String(moneySplit).substring(0,7)+"k";
-    }else if(money<Math.pow(10,3)){
-        return "$"+String(money).substr(0,7);
+    else if(Math.abs(x/Math.pow(10,9)) >1){
+        moneySplit = x/Math.pow(10,9);
+        return String(moneySplit).substring(0,6)+"bn";
+    }else if(Math.abs(x/Math.pow(10,6)) >1){
+        moneySplit = x/Math.pow(10,6);
+        return String(moneySplit).substring(0,7)+"m";
+    }else if(Math.abs(x/Math.pow(10,3)) >1){
+        moneySplit = x/Math.pow(10,3);
+        return String(moneySplit).substring(0,7)+"k";
+    }else if(x<Math.pow(10,3)){
+        return String(x).substring(0,8);
     }
     else{
-        return "$"+String(money);
+        return String(x).substring(0,8);
     }
 }
 function goal_value_for_node(ns, level_per, ram_per, core_per, node){
@@ -37,7 +37,7 @@ function goal_value_for_node(ns, level_per, ram_per, core_per, node){
 	}else{
 		goal= "ERROR"
 	}
-	ns.print("GOAL for node: "+node+" is: ",goal.toUpperCase()," value: ",goal_value.toFixed(3));
+	// ns.print("GOAL for node: "+node+" is: ",goal.toUpperCase()," value: ",goal_value.toFixed(3));
 	return goal_value
 }
 function goal_for_node(ns, level_per, ram_per, core_per, node){
@@ -57,31 +57,17 @@ function goal_for_node(ns, level_per, ram_per, core_per, node){
 export async function main(ns) {
 	//requires formulas.exe
 	var count = 0,i=0,delay_time=0.25;
+	let total_cost, total_produced;
 	var hackServerConstants = ns.formulas.hacknetServers.constants();
-	/*"HashesPerLevel":0.001,
-	"BaseCost":50000,
-	"RamBaseCost":200000,
-	"CoreBaseCost":1000000,
-	"CacheBaseCost":10000000,
-	"PurchaseMult":3.2,
-	"UpgradeLevelMult":1.1,
-	"UpgradeRamMult":1.4,
-	"UpgradeCoreMult":1.55,
-	"UpgradeCacheMult":1.85,
-	"MaxServers":20,
-	"MaxLevel":300,
-	"MaxRam":8192,
-	"MaxCores":128,
-	"MaxCache":158*/
-	//ns.tprint("constants",hackServerConstants)
+	var hacknetNodeConstants = ns.formulas.hacknetNodes.constants();
 	var mults = ns.getPlayer()['mults'];
-	//ns.tprint("mults:",mults)
 	var purchaseMulti = mults['hacknet_node_money'];
 	var ramMulti = mults['hacknet_node_ram_cost'];
 	var coreMulti = mults["hacknet_node_core_cost"];
 	var levelMulti = mults["hacknet_node_level_cost"];
+	var nodeMulti = mults["hacknet_node_purchase_cost"];
 	var num_nodes = ns.hacknet.numNodes()
-	var usedRam, hacknetNewNode, hacknetProduction;
+	var hacknetNewNode, hacknetProduction;
 	var level_per,core_per,ram_per, goal_value;
 
 	var nodes_data=[];
@@ -89,98 +75,150 @@ export async function main(ns) {
 		node:0
 	};
 	var new_node_data;
-	while(count<100000){
-		count+=1;
+	// while(count<100000){
+		// count+=1;
+	while(true){
+		total_produced=0;
+		total_cost=0;
 		hacknetProduction = 0;
 		hacknetNewNode = ns.hacknet.getPurchaseNodeCost();
 		if(num_nodes == 0){
 			ns.hacknet.purchaseNode();
 		}
 		if(ns.hacknet.numNodes() == 0){
-			ns.print(`no nodes, can't afford ${Moneyformat(hacknetNewNode)} yet`)
+			ns.print(`no nodes, can't afford $${numberFormat(hacknetNewNode)} yet`)
 			await delay(1000*0.25);
 			continue;
 		}
 		nodes_data=[];
 		num_nodes = ns.hacknet.numNodes();
 		hacknetNewNode = ns.hacknet.getPurchaseNodeCost();
+		
+		ns.print(
+			`MaxCache: ${numberFormat(hackServerConstants["MaxCache"])}`+
+			` MaxCores: ${numberFormat(hackServerConstants["MaxCores"])}`+
+			` MaxLevel: ${numberFormat(hackServerConstants["MaxLevel"])}`+
+			` MaxRam: ${numberFormat(hackServerConstants["MaxRam"])}`+
+			` MaxServers: ${numberFormat(hackServerConstants["MaxServers"])}`
+		);
+		ns.print(`BaseCost: $${numberFormat(hackServerConstants["BaseCost"])}`+
+			` CacheBaseCost: $${numberFormat(hackServerConstants["CacheBaseCost"])}`+
+			` CoreBaseCost: $${numberFormat(hackServerConstants["CoreBaseCost"])}`+
+			` RamBaseCost: $${numberFormat(hackServerConstants["RamBaseCost"])}`);
+		ns.print(
+			`PurchaseMult: ${numberFormat(hackServerConstants["PurchaseMult"])}`+
+			` UpgradeCacheMult: ${numberFormat(hackServerConstants["UpgradeCacheMult"])}`+
+			` UpgradeCoreMult: ${numberFormat(hackServerConstants["UpgradeCoreMult"])}`+
+			` UpgradeLevelMult: ${numberFormat(hackServerConstants["UpgradeLevelMult"])}`+
+			` UpgradeRamMult: ${numberFormat(hackServerConstants["CacheBaseCost"])}`
+		);
+		ns.print(`mults: {hacknet_node_money: ${purchaseMulti}, `+
+			`ram: ${ramMulti}, `+
+			`core: ${coreMulti}, `+
+			`level: ${levelMulti}, `+
+			`purchase_server: ${nodeMulti}}`
+		);
 		for(i=0; i<num_nodes; i++){
-			//ns.print(i);
-			usedRam = ns.getServerUsedRam(`hacknet-server-${i}`);
+			// ns.print(i,ns.hacknet.getNodeStats(i));
+			ns.print(`${i} tProd: ${numberFormat(ns.hacknet.getNodeStats(i)["totalProduction"])}`+
+				` prod: ${numberFormat(ns.hacknet.getNodeStats(i)["production"])}`+
+				` cap: ${numberFormat(ns.hacknet.getNodeStats(i)["hashCapacity"])}`+
+				` lvl: ${ns.hacknet.getNodeStats(i)["level"]}`+
+				` ram: ${numberFormat(ns.hacknet.getNodeStats(i)["ram"])}`+
+				` cor: ${ns.hacknet.getNodeStats(i)["cores"]}`+
+				` cac: ${ns.hacknet.getNodeStats(i)["cache"]}`
+			);
+			total_produced+=ns.hacknet.getNodeStats(i)["totalProduction"];
+			let form_hacknetServerCost = ns.formulas.hacknetServers.hacknetServerCost(
+				i+1, nodeMulti);
+			let form_hacknetLevelUpgradeCost = ns.formulas.hacknetServers.levelUpgradeCost(
+				1,ns.hacknet.getNodeStats(i)["level"]-1,levelMulti
+			);
+			let form_hacknetRamUpgradeCost = ns.formulas.hacknetServers.ramUpgradeCost(
+				1,Math.log2(ns.hacknet.getNodeStats(i)["ram"])-1,ramMulti
+			);
+			let form_hacknetCoreUpgradeCost = ns.formulas.hacknetServers.coreUpgradeCost(
+				1,ns.hacknet.getNodeStats(i)["cores"]-1,coreMulti
+			);
+			let form_hacknetCacheUpgradeCost = ns.formulas.hacknetServers.cacheUpgradeCost(
+				1,ns.hacknet.getNodeStats(i)["cache"]-1
+			);
+			// ns.print(`${i} `+ 
+			// `${numberFormat(form_hacknetServerCost)} `+
+			// `lvl: $${numberFormat(form_hacknetLevelUpgradeCost)} `+
+			// `ram: $${numberFormat(form_hacknetRamUpgradeCost)} `+
+			// `core: $${numberFormat(form_hacknetCoreUpgradeCost)} `+
+			// `cache: $${numberFormat(form_hacknetCacheUpgradeCost)} `);			
+			total_cost+= form_hacknetServerCost +form_hacknetLevelUpgradeCost + form_hacknetRamUpgradeCost +
+				form_hacknetCoreUpgradeCost + form_hacknetCacheUpgradeCost;
+			//calc version
+			let calc_hacknetServerCost = hackServerConstants["BaseCost"]*nodeMulti*
+				(Math.pow(hackServerConstants["PurchaseMult"],i));
+			let calc_hacknetLevelUpgradeCost = hackServerConstants["BaseCost"]*levelMulti*
+				(Math.pow(hackServerConstants["UpgradeLevelMult"], ns.hacknet.getNodeStats(i)["level"]+1)-1);
+			let calc_hacknetRamUpgradeCost= hackServerConstants["RamBaseCost"]*ramMulti*
+				// (Math.pow(hackServerConstants["UpgradeRamMult"], Math.log2(ns.hacknet.getNodeStats(i)["ram"])+1)-1);
+				(Math.pow(hackServerConstants["UpgradeRamMult"], Math.log2(ns.hacknet.getNodeStats(i)["ram"])+1)-1);
+			let calc_hacknetCoreUpgradeCost= hackServerConstants["CoreBaseCost"]*coreMulti*
+				(Math.pow(hackServerConstants["UpgradeCoreMult"], ns.hacknet.getNodeStats(i)["cores"]+1)-1);
+			let calc_hacknetCacheUpgradeCost= hackServerConstants["CacheBaseCost"]*1*
+				(Math.pow(hackServerConstants["UpgradeCacheMult"], ns.hacknet.getNodeStats(i)["cache"]+1)-1);
+			// ns.print(`${i} `+ 
+			// `${numberFormat(calc_hacknetServerCost)} `+
+			// `lvl: $${numberFormat(calc_hacknetLevelUpgradeCost)} `+
+			// `ram: $${numberFormat(calc_hacknetRamUpgradeCost)} `+
+			// `core: $${numberFormat(calc_hacknetCoreUpgradeCost)} `+
+			// `cache: $${numberFormat(calc_hacknetCacheUpgradeCost)} `);
+			// total_cost+= calc_hacknetServerCost + calc_hacknetLevelUpgradeCost + calc_hacknetRamUpgradeCost + 
+			// 	calc_hacknetCoreUpgradeCost + calc_hacknetCacheUpgradeCost;
 			new_node_data = Object.create(node_data,{node:{value: i}});
-			//ns.print(ns.hacknet.getNodeStats(i))
 			new_node_data.level = ns.hacknet.getNodeStats(i)["level"];
 			new_node_data.ram = ns.hacknet.getNodeStats(i)["ram"];
 			new_node_data.cores = ns.hacknet.getNodeStats(i)["cores"];
 			new_node_data.cache = ns.hacknet.getNodeStats(i)["cache"];
-			new_node_data.level_upgrade= ns.formulas.hacknetServers.levelUpgradeCost(
-				ns.hacknet.getNodeStats(i)["level"]
-				,1
-				,levelMulti
-			);
+			new_node_data.level_upgrade = ns.hacknet.getLevelUpgradeCost(i,1);
 			new_node_data.level_hash_gain = ns.formulas.hacknetServers.hashGainRate(
 				ns.hacknet.getNodeStats(i)["level"]+1
-				,usedRam
+				,ns.hacknet.getNodeStats(i)["ramUsed"]
 				,ns.hacknet.getNodeStats(i)["ram"]
 				,ns.hacknet.getNodeStats(i)["cores"]
 				,purchaseMulti
 			);
-			new_node_data.ram_upgrade= ns.formulas.hacknetServers.ramUpgradeCost(
-				ns.hacknet.getNodeStats(i)["ram"]
-				,1
-				,ramMulti
-			);
+			new_node_data.ram_upgrade = ns.hacknet.getRamUpgradeCost(i,1);
 			new_node_data.ram_hash_gain=  ns.formulas.hacknetServers.hashGainRate(
 				ns.hacknet.getNodeStats(i)["level"]
-				,usedRam
+				,ns.hacknet.getNodeStats(i)["ramUsed"]
 				,ns.hacknet.getNodeStats(i)["ram"]*2
 				,ns.hacknet.getNodeStats(i)["cores"]
 				,purchaseMulti
 			)
-			new_node_data.core_upgrade= ns.formulas.hacknetServers.coreUpgradeCost(
-				ns.hacknet.getNodeStats(i)["cores"]
-				,1
-				,coreMulti
-			);
+			new_node_data.core_upgrade = ns.hacknet.getCoreUpgradeCost(i,1);
 			new_node_data.core_hash_gain= ns.formulas.hacknetServers.hashGainRate(
 				ns.hacknet.getNodeStats(i)["level"]
-				,usedRam
+				,ns.hacknet.getNodeStats(i)["ramUsed"]
 				,ns.hacknet.getNodeStats(i)["ram"]
 				,ns.hacknet.getNodeStats(i)["cores"]+1
 				,purchaseMulti
 			);
-			new_node_data.cache_upgrade= ns.formulas.hacknetServers.cacheUpgradeCost(
-				ns.hacknet.getNodeStats(i)["cache"]
-				,1
-			);
-			// new_node_data.cache_hash_gain= ns.formulas.hacknetServers.hashGainRate(
-			// 	ns.hacknet.getNodeStats(i)["level"]
-			// 	,usedRam
-			// 	,ns.hacknet.getNodeStats(i)["ram"]
-			// 	,ns.hacknet.getNodeStats(i)["cores"]
-			// 	,purchaseMulti
-			// );
+			new_node_data.cache_upgrade= ns.hacknet.getCacheUpgradeCost(i,1);
+			//gain percentage
 			new_node_data.level_per = new_node_data.level_upgrade/
 				(new_node_data.level_hash_gain - ns.hacknet.getNodeStats(i)["production"]);
 			new_node_data.ram_per = new_node_data.ram_upgrade/
 				(new_node_data.ram_hash_gain - ns.hacknet.getNodeStats(i)["production"]);
 			new_node_data.core_per = new_node_data.core_upgrade/
 				(new_node_data.core_hash_gain - ns.hacknet.getNodeStats(i)["production"]);
-			// new_node_data.cache_per = new_node_data.cache_upgrade/
-			// 	(new_node_data.cache_hash_gain - ns.hacknet.getNodeStats(i)["production"]);
+			//goal
 			new_node_data.goal_value = goal_value_for_node(ns
 				, new_node_data.level_per
 				, new_node_data.ram_per
 				, new_node_data.core_per
-				//, new_node_data.cache_per
 				, i);
 			new_node_data.goal = goal_for_node(ns
 				, new_node_data.level_per
 				, new_node_data.ram_per
 				, new_node_data.core_per
-				//, new_node_data.cache_per
 				, i);
-			//ns.print(new_node_data);
 			nodes_data.push(new_node_data);
 			hacknetProduction += ns.hacknet.getNodeStats(i)["production"];
 			//buy cache
@@ -192,19 +230,19 @@ export async function main(ns) {
 		//sort nodes_data to get the best to upgrade
 		nodes_data.sort(function (a, b) { return a.goal_value - b.goal_value });
 		//print logs
-		ns.print(nodes_data[0]["node"]+" "+nodes_data[0]["goal"]);
-		ns.print("level "+
-			ns.hacknet.getNodeStats(nodes_data[0]["node"])["level"]+" upgrade: "+
-			Moneyformat(nodes_data[0]["level_upgrade"]));
-		ns.print("ram "+
-			ns.hacknet.getNodeStats(nodes_data[0]["node"])["ram"]+" upgrade: "+
-			Moneyformat(nodes_data[0]["ram_upgrade"]));
-		ns.print("core "+
-			ns.hacknet.getNodeStats(nodes_data[0]["node"])["cores"]+" upgrade: "+
-			Moneyformat(nodes_data[0]["core_upgrade"]));
-		ns.print("cache "+
-			ns.hacknet.getNodeStats(nodes_data[0]["node"])["cache"]+" upgrade: "+
-			Moneyformat(nodes_data[0]["cache_upgrade"]));
+		ns.print("NODE "+numberFormat(nodes_data[0]["node"])+" "+nodes_data[0]["goal"]);
+		ns.print("level "+numberFormat(
+			ns.hacknet.getNodeStats(nodes_data[0]["node"])["level"])+" upgrade: $"+
+			numberFormat(nodes_data[0]["level_upgrade"]));
+		ns.print("ram   "+numberFormat(
+			ns.hacknet.getNodeStats(nodes_data[0]["node"])["ram"])+" upgrade: $"+
+			numberFormat(nodes_data[0]["ram_upgrade"]));
+		ns.print("core  "+numberFormat(
+			ns.hacknet.getNodeStats(nodes_data[0]["node"])["cores"])+" upgrade: $"+
+			numberFormat(nodes_data[0]["core_upgrade"]));
+		ns.print("cache "+numberFormat(
+			ns.hacknet.getNodeStats(nodes_data[0]["node"])["cache"])+" upgrade: $"+
+			numberFormat(nodes_data[0]["cache_upgrade"]));
 		//decision
 		if(nodes_data[0]["goal"]=="level" &&
 			ns.getServerMoneyAvailable("home") > nodes_data[0]["level_upgrade"]){
@@ -215,37 +253,34 @@ export async function main(ns) {
 		}else if(nodes_data[0]["goal"]=="core" &&
 			ns.getServerMoneyAvailable("home") > nodes_data[0]["core_upgrade"]){
 				ns.hacknet.upgradeCore(nodes_data[0]["node"],1)
-		// }else if(nodes_data[0]["goal"]=="cache" &&
-		// 	ns.getServerMoneyAvailable("home") > nodes_data[0]["cache_upgrade"]){
-		// 		ns.hacknet.upgradeCache(nodes_data[0]["node"],1)
 		}
-		//decision to buy new node
 		//sort by levels
 		nodes_data.sort(function (a, b) { return a.level - b.level });
-		/*for(i=0; i<nodes_data.length; i++){
-			ns.print(nodes_data[i].node," lvl: ",nodes_data[i].level);
-		}*/
+		//decision to buy new node
 		if(nodes_data[0].level < 200){
-			ns.print("purchase? level upgrade: "+
-			Moneyformat(nodes_data[0]["level_upgrade"])+
-			" new node: "+ Moneyformat(hacknetNewNode));
+			let form_hacknetNewNode = ns.formulas.hacknetServers.hacknetServerCost(
+				num_nodes+1, nodeMulti);
+			ns.print("Purchase new node?: $"+ numberFormat(hacknetNewNode)+
+				" $"+numberFormat(form_hacknetNewNode));
 			if(nodes_data[0]["level_upgrade"]> hacknetNewNode){
 				ns.hacknet.purchaseNode();
 			}
 		}else if((ns.hacknet.getNodeStats(0)["cores"]) < 
 		ns.formulas.hacknetNodes.constants()["MaxCores"]){
 			nodes_data.sort(function (a, b) { return a.cores - b.cores });
-			ns.print("purchase? core upgrade: "+
-			Moneyformat(nodes_data[0]["core_upgrade"])+
-			" new node: "+ Moneyformat(hacknetNewNode));
+			ns.print("Purchase new node?: $"+ numberFormat(hacknetNewNode));
 			nodes_data.sort(function (a, b) { return a.cores - b.cores });
 			//ns.print("core sort ",nodes_data[0])
 			if((nodes_data[0].core_upgrade/10)>hacknetNewNode){
 				ns.hacknet.purchaseNode();
 			}
 		}
-		ns.print("Total production per second ", hacknetProduction);
-		ns.print("hashs: ", ns.hacknet.hashCapacity(),"/",ns.hacknet.numHashes());
+		ns.print("Total Spent $",numberFormat(total_cost));
+		ns.print("Total Produced $",numberFormat(total_produced)," $",numberFormat(ns.hacknet.getHashUpgradeLevel("Sell for Money")*
+			Math.pow(10,9)));
+		ns.print("Hashs: ", numberFormat(ns.hacknet.hashCapacity()),"/"+
+			numberFormat(ns.hacknet.numHashes()));
+		ns.print("Hash Rate ", hacknetProduction);
 		//sell hashes
 		//ns.tprint("hash upgrades",ns.hacknet.getHashUpgrades());
 		/*"Sell for Money",
