@@ -78,7 +78,7 @@ export async function main(ns) {
 				faction_favour = ns.singularity.getCompanyFavor(company);
 
 				max_rep_gain=0;
-				work_field='';
+				work_field=null;
 				for(j=0; j<workTypes.length;j++){
 					workreq = ns.singularity.getCompanyPositionInfo(company,workTypes[j]);
 					if(faction_rep >= workreq["requiredReputation"] &&
@@ -101,6 +101,10 @@ export async function main(ns) {
 							work_field = workreq["field"]
 						}
 					}
+				}
+				if(!work_field){
+					ns.print("no work field found for ", company);
+					continue;
 				}
 				ns.singularity.applyToCompany(company,work_field);
 				ns.singularity.workForCompany(company, false);
