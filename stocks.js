@@ -4,7 +4,7 @@
 //         setTimeout(resolve, milliseconds);
 //     });
 // }
-function moneyFormat(ns,money){
+function numberFormat(money){
     var moneySplit, return_string;
     if(Math.abs(money/Math.pow(10,12)) >1){
         moneySplit = Math.abs(money)/Math.pow(10,12);
@@ -23,12 +23,6 @@ function moneyFormat(ns,money){
     else{
         return_string=String(Math.abs(money));
     }
-		if(Math.sign(money)==1 || Math.sign(money)==0){
-			return_string= " $"+return_string;
-		}else{
-			return_string= "-$"+return_string;
-		}
-		return_string
 		return return_string
 }
 function percFormat(ns,perc){
@@ -74,8 +68,8 @@ function generateRand(ns,symbols){
         }
     }
     ns.print("rand: ",symbols[rand]," randCount: ",randCount
-    ," salesGain: ",moneyFormat(ns,salesGain)
-    ," My Money: ",moneyFormat(ns,ns.getPlayer()["money"]));
+    ," salesGain: $",numberFormat(salesGain)
+    ," My Money: $",numberFormat(ns.getPlayer()["money"]));
     return rand;
 }
 export async function main(ns) {
@@ -85,7 +79,7 @@ export async function main(ns) {
 	rand = generateRand(ns,symbols);
 	while(ns.getPlayer()["money"]>0){
 		await ns.stock.nextUpdate();
-		ns.print("money @ start: ",moneyFormat(ns,ns.getPlayer()["money"]));
+		ns.print("money @ start: $",numberFormat(ns.getPlayer()["money"]));
 		for(i=0; i<symbols.length; i++){
 			smb = symbols[i];
 			smbStr = smb + "   ";
@@ -106,7 +100,7 @@ export async function main(ns) {
 						break;
 					}
 				}
-				ns.print(smbStr," MShares: ",j, " price: ",moneyFormat(ns,j*ns.stock.getAskPrice(smb)));
+				ns.print(smbStr," MShares: ",j, " price: $",numberFormat(j*ns.stock.getAskPrice(smb)));
 				if((ns.getPlayer()["money"]-(j *ns.stock.getAskPrice(smb)))>(
 					minMoney+stock_con["StockMarketCommission"]) && j>10){
 					ns.print("buy ",smb, ": ",j);
@@ -124,19 +118,19 @@ export async function main(ns) {
 				ns.print(smbStr
 					," for:  ",percFormat(ns, ns.stock.getForecast(smb)*100)
 					,"  vol:  ",percFormat(ns, ns.stock.getVolatility(smb)*100)
-					,"  Total: ",moneyFormat(ns, total_cost)
-					,"  Profit: ",moneyFormat(ns, profit)
+					,"  Total: $",numberFormat( total_cost)
+					,"  Profit: $",numberFormat( profit)
 					,"  ",percFormat(ns, profit_perc)
-					,"  Gain: ", moneyFormat(ns,sales_gain)
-					,"  shares: ",position[0]
+					,"  Gain: $", numberFormat(sales_gain)
+					,"  shares: ",numberFormat(position[0])
 				);
 				if(ns.stock.getForecast(smb)<0.5 && sales_gain > 0){
-					ns.print("sell ",smb," SaleGain: ",moneyFormat(ns,sales_gain));
+					ns.print("sell ",smb," SaleGain: $",numberFormat(sales_gain));
 					ns.stock.sellStock(smb, maxShares);
 				}
 			}
 		}
 		rand = generateRand(ns,symbols);
-		ns.print("money @ end: ",moneyFormat(ns,ns.getPlayer()["money"]));
+		ns.print("money @ end: ",numberFormat(ns.getPlayer()["money"]));
 	}
 }
