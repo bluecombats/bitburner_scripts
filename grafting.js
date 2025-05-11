@@ -134,11 +134,11 @@ function split_augs(ns,augs){
 		stats["hacking_speed"]>1||
 		stats["hacking"]>1){
 			hack_augs.push(augs[i]);
-		}else if(stats["hacknet_node_core_cost"]>1 ||
-		stats["hacknet_node_level_cost"]>1||
-		stats["hacknet_node_money"]>1||
-		stats["hacknet_node_purchase_cost"]>1||
-		stats["hacknet_node_ram_cost"]>1){
+		}else if(stats["hacknet_node_core_cost"]<1 ||
+		stats["hacknet_node_level_cost"]<1||
+		stats["hacknet_node_purchase_cost"]<1||
+		stats["hacknet_node_ram_cost"]<1||
+		stats["hacknet_node_money"]>1){
 			hacknet_augs.push(augs[i]);
 		}else if(stats["agility_exp"]>1 ||
 		stats["agility"]>1||
