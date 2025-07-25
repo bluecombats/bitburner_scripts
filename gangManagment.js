@@ -1,184 +1,213 @@
 /** @param {NS} ns */
-function delay(milliseconds){
-    return new Promise(resolve => {
-        setTimeout(resolve, milliseconds);
-    });
+function delay(milliseconds) {
+	return new Promise(resolve => {
+		setTimeout(resolve, milliseconds);
+	});
 }
-class gangManagement{
-	constructor(ns){
-		this.ns = ns
+function moneyFormat(money) {
+	let moneySplit;
+	if (Math.abs(money / Math.pow(10, 12)) > 1) {
+		moneySplit = money / Math.pow(10, 12);
+		return "$" + String(moneySplit).substring(0, 6) + "tr";
+	}
+	else if (Math.abs(money / Math.pow(10, 9)) > 1) {
+		moneySplit = money / Math.pow(10, 9);
+		return "$" + String(moneySplit).substring(0, 6) + "bn";
+	} else if (Math.abs(money / Math.pow(10, 6)) > 1) {
+		moneySplit = money / Math.pow(10, 6);
+		return "$" + String(moneySplit).substring(0, 7) + "m";
+	} else if (Math.abs(money / Math.pow(10, 3)) > 1) {
+		moneySplit = money / Math.pow(10, 3);
+		return "$" + String(moneySplit).substring(0, 7) + "k";
+	}
+	else {
+		return "$" + String(money);
 	}
 }
-function difficulty(ns,task, member){
-	var taskstat = ns.gang.getTaskStats(task);
-	var info = ns.gang.getMemberInformation(member);
-	//ns.print("task info: ", taskstat);
-	//ns.print("member info: ", info);
-	var difficult = info["hack"]*(taskstat["hackWeight"]/100)
-				+info["str"]*(taskstat["strWeight"]/100)
-				+info["def"]*(taskstat["defWeight"]/100)
-				+info["dex"]*(taskstat["dexWeight"]/100)
-				+info["agi"]*(taskstat["agiWeight"]/100)
-				+info["cha"]*(taskstat["chaWeight"]/100);
-	ns.print(task," difficulty: ",taskstat["difficulty"]);
-	ns.print(member," to do task: ", difficult);
-	return difficult > taskstat["difficulty"];
+function diff_calc(ns, member, task) {
+	let difficulty, info = ns.gang.getMemberInformation(member), task_info = ns.gang.getTaskStats(task);
+	difficulty = (task_info["hackWeight"] / 100) * info["hack_mult"] * info["hack_asc_mult"];
+	difficulty += (task_info["strWeight"] / 100) * info["str_mult"] * info["str_asc_mult"];
+	difficulty += (task_info["defWeight"] / 100) * info["def_mult"] * info["def_asc_mult"];
+	difficulty += (task_info["dexWeight"] / 100) * info["dex_mult"] * info["dex_asc_mult"];
+	difficulty += (task_info["agiWeight"] / 100) * info["agi_mult"] * info["agi_asc_mult"];
+	difficulty += (task_info["chaWeight"] / 100) * info["cha_mult"] * info["cha_asc_mult"];
+	ns.print(task, " task diff: ", task_info["difficulty"], " member ", member, " diff: ", difficulty.toFixed(2));
+	return difficulty;
 }
-function ascention(ns,member){
-	var info = ns.gang.getMemberInformation(member);
-	var asc_info = ns.gang.getAscensionResult(member);
-	if(!asc_info){
+function buy_eq(ns, member) {
+	let i, equipments = ns.gang.getEquipmentNames();
+	let info = ns.gang.getMemberInformation(member), equipements_list = [];
+	ns.print(equipments);
+	for (i = 0; i < equipments.length; i++) {
+		equipements_list[i] = {
+			"name": equipments[i]
+			, "cost": ns.gang.getEquipmentCost(equipments[i])
+			//,"type":ns.gang.getEquipmentType(equipments[i])
+		}
+		ns.print(moneyFormat(equipements_list[i]["cost"]),
+			", ", equipements_list[i]["type"],
+			", ", equipements_list[i]["name"]);
 	}
-	else if(asc_info["agi"]>(2) &&
-	asc_info["cha"]>(2) &&
-	asc_info["def"]>(2) &&
-	asc_info["dex"]>(2) &&
-	asc_info["hack"]>(2) &&
-	asc_info["str"]>(2)){
-		ns.gang.ascendMember(member);
-	}
-}
-function buy_equipement(ns,member,equipements_list){
-	var i
-	for(i in equipements_list){
-		equipements_list[i]["cost"] = ns.gang.getEquipmentCost(equipements_list[i]["name"]);
-	}
-	equipements_list.sort(function(a, b){return a.cost - b.cost});
-	for(i in equipements_list){
-		var info = ns.gang.getMemberInformation(member);
-		if(info["upgrades"].indexOf(equipements_list[i]["name"])<0){
-			if(ns.getServerMoneyAvailable("home")>equipements_list[i]["cost"]){
+	equipements_list.sort(function (a, b) { return a.cost - b.cost });
+	for (i = 0; i < equipements_list.length; i++) {
+		if (info["upgrades"].indexOf(equipements_list[i]["name"]) < 0) {
+			ns.print(moneyFormat(equipements_list[i]["cost"]), ", ", equipements_list[i]["type"], ", ", equipements_list[i]["name"]);
+			if (ns.getServerMoneyAvailable("home") > equipements_list[i]["cost"]) {
 				ns.gang.purchaseEquipment(member, equipements_list[i]["name"]);
 			}
 		}
 	}
+	return "ok";
 }
-function optimisedTask(ns, member, tasks, option){
-	var level = 0, optimisedTask;
-	var taskinfo,task;
-	for(task of tasks){
-		if(difficulty(ns,task,member)){
-			taskinfo = ns.gang.getTaskStats(task);
-			if(option=="wanted" && taskinfo["baseWanted"]<level){
-				level = taskinfo["baseWanted"];
-				optimisedTask = task;
-			}
-			if(option=="respect" && taskinfo["baseRespect"]>level){
-				level = taskinfo["baseRespect"];
-				optimisedTask = task;
-			}
-			if(option=="money" && taskinfo["baseMoney"]>level){
-				level = taskinfo["baseMoney"];
-				optimisedTask = task;
-			}
-		}
+function asc_member(ns, member) {
+	var info = ns.gang.getMemberInformation(member), asc_info = ns.gang.getAscensionResult(member);
+	ns.print(member, " info: ", info);
+	ns.print(member, " asc_info: ", asc_info);
+	//ns.print(members[member]," agi: ",info["agi_asc_mult"]," asc: ",asc_info["agi"]);
+	//ns.print(members[member]," cha: ",info["cha_asc_mult"]," asc: ",asc_info["cha"]);
+	//ns.print(members[member]," def: ",info["def_asc_mult"]," asc: ",asc_info["def"]);
+	//ns.print(members[member]," dex: ",info["dex_asc_mult"]," asc: ",asc_info["dex"]);
+	//ns.print(members[member]," hack: ",info["hack_asc_mult"]," asc: ",asc_info["hack"]);
+	//ns.print(members[member]," str: ",info["str_asc_mult"]," asc: ",asc_info["str"]);
+	if (!asc_info) {
+		ns.print("skip, can't be ascended");
 	}
-	ns.gang.setMemberTask(member, optimisedTask);
-}
-function gangEngage(ns){
-	var gang_info = ns.gang.getGangInformation();
-	var other_gangs_info = ns.gang.getOtherGangInformation();
-	var power=0,other_gang;
-	//ns.print(gang_info["faction"]);
-	for(other_gang in other_gangs_info){
-		if(other_gang != gang_info["faction"] 
-		&& other_gangs_info[other_gang]["power"] >power){
-			power = other_gangs_info[other_gang]["power"];
-		}
+	else if (asc_info["agi"] > (2) &&
+		asc_info["cha"] > (2) &&
+		asc_info["def"] > (2) &&
+		asc_info["dex"] > (2) &&
+		asc_info["hack"] > (2) &&
+		asc_info["str"] > (2)) {
+		ns.gang.ascendMember(member);
 	}
-	ns.print("gang pow", gang_info["power"], "max other:",power);
-	if((power*2)<gang_info["power"]){
-		ns.gang.setTerritoryWarfare(true);
-	}
-	else{
-		ns.gang.setTerritoryWarfare(false);
-	}
-}
-function Moneyformat(money){
-    var moneySplit;
-    if(Math.abs(money/Math.pow(10,12)) >1){
-        moneySplit = money/Math.pow(10,12);
-        return "$"+String(moneySplit).substring(0,7)+"tr";
-    }
-    else if(Math.abs(money/Math.pow(10,9)) >1){
-        moneySplit = money/Math.pow(10,9);
-        return "$"+String(moneySplit).substring(0,7)+"bn";
-    }else if(Math.abs(money/Math.pow(10,6)) >1){
-        moneySplit = money/Math.pow(10,6);
-        return "$"+String(moneySplit).substring(0,7)+"m";
-    }else if(Math.abs(money/Math.pow(10,3)) >1){
-        moneySplit = money/Math.pow(10,3);
-        return "$"+String(moneySplit).substring(0,7)+"k";
-    }
-    else{
-        return "$"+String(money);
-    }
+	return "ok";
 }
 export async function main(ns) {
-	if(!ns.gang.inGang()){
+	if (!ns.gang.inGang()) {
 		ns.tprint("Not in a gang");
+		ns.tprint(ns.heart.break());
+		//gangs: [Slum Snakes, Tetrads, The Syndicate, The Dark Army, Speakers for the Dead, NiteSec, The Black Hand]
+		ns.tprint("create gang:",ns.gang.createGang("NiteSec"));
 		return "pick a gang"
 	}
-	var check=true, info, gang_info, other_gang_info, asc_info, members, member, tasks, task, taskstat={};
+	let check = true, members, member, tasks, task, taskstat = {}, difficulty, lastMemberNumber;
+	let trainTasks = [], reduceWanted = [], earnRespectWanted = [], otherGangs, i, maxPower = 0;
 	tasks = ns.gang.getTaskNames();
-	//["Unassigned","Ransomware","Phishing","Identity Theft","DDoS Attacks","Plant Virus"
-	//,"Fraud & Counterfeiting","Money Laundering","Cyberterrorism","Ethical Hacking"
-	//,"Vigilante Justice","Train Combat","Train Hacking","Train Charisma","Territory Warfare"]
-	//ns.print(tasks);
-	var equipments = ns.gang.getEquipmentNames();
-	//ns.print(equipments);
-	var equipements_list=[],i;
-	for (var eq in equipments){
-		equipements_list[eq]={
-			"name":equipments[eq]
-			,"cost":ns.gang.getEquipmentCost(equipments[eq])
+	ns.print(tasks);
+	for (task in tasks) {
+		taskstat[tasks[task]] = ns.gang.getTaskStats(tasks[task]);
+		/*for(var stat in taskstat[tasks[task]]){
+			ns.print(tasks[task]," : ",stat," : ",taskstat[tasks[task]][stat]);
+		}*/
+		ns.print(tasks[task], " : ", taskstat[tasks[task]]);
+		if (tasks[task] == "Territory Warfare" || tasks[task] == "Unassigned") {
+			continue
+		}
+		if (taskstat[tasks[task]]["baseRespect"] == 0 && taskstat[tasks[task]]["baseWanted"] == 0) {
+			trainTasks.push(tasks[task]);
+		}
+		else if (taskstat[tasks[task]]["baseWanted"] < 0) {
+			reduceWanted.push(tasks[task]);
+		}
+		else {
+			earnRespectWanted.push(tasks[task]);
 		}
 	}
-	//ns.print(equipments);
-	//ns.print(equipements_list);
-	while(check){
-		while(ns.gang.canRecruitMember()){
-			ns.gang.recruitMember("gang"+(ns.gang.getMemberNames().length));
+	ns.print("train tasks: ", trainTasks);
+	ns.print("reduce wanted tasks: ", reduceWanted);
+	ns.print("earn respect & wanted tasks: ", earnRespectWanted);
+
+	//disable log for ns function
+	// ns.disableLog(gang.setMemberTask)
+
+	while (check) {
+		members = ns.gang.getMemberNames();
+		if (members.length ==0){
+			ns.gang.recruitMember("gang1");
+			members = ns.gang.getMemberNames();
+		}
+		while (ns.gang.canRecruitMember()) {
+			ns.print("can recruit member");
+			members = ns.gang.getMemberNames();
+			//find if a gang member has been killed			
+			lastMemberNumber = members[members.length - 1].substring(4, 10);
+			ns.gang.recruitMember("gang" + (parseInt(lastMemberNumber) + 1));
+			await delay(1000 * 30);
 		}
 		members = ns.gang.getMemberNames();
 		ns.print(members);
-		for(member of members){
-			info = ns.gang.getMemberInformation(member);
-			gang_info = ns.gang.getGangInformation();
-			other_gang_info = ns.gang.getOtherGangInformation();
-			//train
-			if(info["hack"]<100){
-				ns.gang.setMemberTask(member, "Train Hacking");
-			}else if(info["cha"]<100){
-				ns.gang.setMemberTask(member, "Train Charisma");
-			}else if(info["str"]<100 ||
-			 info["def"]<100 ||
-			 info["dex"]<100 || 
-			 info["agi"]<100){
-				ns.gang.setMemberTask(member, "Train Combat");
+		//train
+		for (task in trainTasks) {
+			for (member in members) {
+				difficulty = diff_calc(ns, members[member], trainTasks[task]);
+				//ns.print(members[member]," doing ", trainTasks[train])
+				ns.gang.setMemberTask(members[member], trainTasks[task]);
 			}
-			//training over, gain money, reduce wanted, earn repect
-			if(gang_info["wantedLevelGainRate"]>0){
-				optimisedTask(ns,member, tasks,"wanted");
+			await delay(1000 * 30);
+		}
+		//not train
+		for (task in earnRespectWanted) {
+			if (earnRespectWanted[task] == "Unassigned" || earnRespectWanted[task]["baseWanted"] > 2) {
+				continue;
 			}
-			else if(members.length < 12){
-				optimisedTask(ns,member, tasks,"respect");
+			for (member in members) {
+				//calc difficulty
+				difficulty = diff_calc(ns, members[member], earnRespectWanted[task]);
+				if (difficulty > taskstat[earnRespectWanted[task]]["difficulty"]) {
+					ns.gang.setMemberTask(members[member], earnRespectWanted[task]);
+				}
 			}
-			else if(gang_info["territory"]<0.9 && 
-			difficulty(ns,"Territory Warfare",member)){
-				ns.gang.setMemberTask(member, "Territory Warfare");
+			await delay(1000 * 10);
+		}
+		//buy equipment
+		for (member in members) {
+			buy_eq(ns, members[member]);
+		}
+		//reduce wanted
+		while (ns.gang.getGangInformation()["wantedLevel"] > 1.1) {
+			for (task in reduceWanted) {
+				for (member in members) {
+					difficulty = diff_calc(ns, members[member], reduceWanted[task]);
+					ns.gang.setMemberTask(members[member], reduceWanted[task]);
+				}
+				await delay(1000 * 5);
+				ns.print("Wanted level", ns.gang.getGangInformation()["wantedLevel"]);
 			}
-			else{
-				optimisedTask(ns,member, tasks,"money");
+		}
+		//territory warfare
+		ns.print("Territory warefare territory %: ", ns.gang.getGangInformation()["territory"])
+		if (ns.gang.getGangInformation()["territory"] < 1) {
+			for (member in members) {
+				difficulty = diff_calc(ns, members[member], "Territory Warfare");
+				if (difficulty > taskstat["Territory Warfare"]["difficulty"]) {
+					ns.gang.setMemberTask(members[member], "Territory Warfare");
+				}
 			}
-			ns.print("territory %: ",gang_info["territory"]);
-			gangEngage(ns);
-			//ns.print("other gangs info:",other_gang_info);
-			//buy equipment
-			buy_equipement(ns,member,equipements_list);
-			//ascension
-			ascention(ns,member);
-			await delay(1000*10);
+			otherGangs = ns.gang.getOtherGangInformation();
+			maxPower = 0;
+			//ns.tprint(typeof(otherGangs)," ",otherGangs);
+			//ns.tprint(Object.keys(otherGangs));
+			for (i of Object.keys(otherGangs)) {
+				//ns.tprint(i," ",otherGangs[i]);
+				if (i == ns.gang.getGangInformation()["faction"]) {
+					continue;
+				}
+				if (otherGangs[i]["power"] > maxPower) {
+					maxPower = otherGangs[i]["power"];
+					//ns.tprint(maxPower," ",otherGangs[i]);
+				}
+			}
+			if (ns.gang.getGangInformation()["power"] > (maxPower * 2)) {
+				ns.gang.setTerritoryWarfare(true);
+			}
+		} else {
+			ns.gang.setTerritoryWarfare(false);
+		}
+		await ns.gang.nextUpdate();
+		//ascension
+		for (member in members) {
+			asc_member(ns, members[member]);
 		}
 	}
 }
