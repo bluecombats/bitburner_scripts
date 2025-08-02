@@ -42,14 +42,16 @@ export async function main(ns) {
 	}
 	const contracts = ns.bladeburner.getContractNames();
 	const actions = ns.bladeburner.getGeneralActionNames();
-	let black_ops;
 	const operations = ns.bladeburner.getOperationNames();
 	const skills = ns.bladeburner.getSkillNames();
-	let min_lvl, est_chance, max_lvl, curr_lvl;
-	let min_cost,min_skill;
-	let city;
-	let est_pop, city_com,city_chaos;
-	let delay_time,i;
+	const citys = [
+		"Aevum",
+		"Chongqing",
+		"Ishima",
+		"New Tokyo",
+		"Sector-12",
+		"Volhaven"
+	]
 	const skill_per = {
 		"Blade's Intuition":1.03,
 		"Cloak":1.055,
@@ -64,26 +66,31 @@ export async function main(ns) {
 		"Short-Circuit":1.055,
 		"Tracer":1.04
 	}
+	let black_ops;
+	let min_lvl, est_chance, max_lvl, curr_lvl;
+	let min_cost,min_skill;
+	let city, next_city;
+	let est_pop, city_com,city_chaos;
+	let delay_time,i, ops_test, contract_test;
+	ns.enableLog("bladeburner.getCity")
+	ns.enableLog("bladeburner.getCityCommunities")
+	ns.enableLog("bladeburner.getCityEstimatedPopulation")
+	ns.enableLog("bladeburner.getCityChaos")
+	ns.enableLog("bladeburner.startAction")
 	while(true){
+		ops_test=false;
+		contract_test=false;
 		ns.printf("current action: %j",ns.bladeburner.getCurrentAction());
-		//check hp of player
-		if(ns.getPlayer()["hp"]["current"]<(ns.getPlayer()["hp"]["max"]*0.5)){
+		//check hp of player or stamina
+		if((ns.getPlayer()["hp"]["current"]/ns.getPlayer()["hp"]["max"]<0.5) || 
+		(ns.bladeburner.getStamina()[0]/ns.bladeburner.getStamina()[1]<0.8)){
 			delay_time = ns.bladeburner.getActionTime("General","Hyperbolic Regeneration Chamber");
 			ns.bladeburner.startAction("General","Hyperbolic Regeneration Chamber")
 			await delay(delay_time);
 			continue;
 		}
-		city = ns.bladeburner.getCity();
-		city_com = ns.bladeburner.getCityCommunities(city);
-		//field action
-		while(ns.bladeburner.getCityEstimatedPopulation(city) <1000){
-			delay_time = ns.bladeburner.getActionTime("General","Field Analysis");
-			ns.bladeburner.startAction("General","Field Analysis")
-			await delay(delay_time);
-			continue;
-		}
 		//diplomancy
-		while(ns.bladeburner.getCityChaos(city) >100){
+		while(ns.bladeburner.getCityChaos(ns.bladeburner.getCity()) >10){
 			delay_time = ns.bladeburner.getActionTime("General","Diplomacy");
 			ns.bladeburner.startAction("General","Diplomacy")
 			await delay(delay_time);
@@ -108,8 +115,31 @@ export async function main(ns) {
 			)
 			await delay(delay_time);
 		}
+		//operations
+		for(i=0;i<operations.length;i++){
+			max_lvl = ns.bladeburner.getActionMaxLevel("Operations",operations[i]);
+			curr_lvl = ns.bladeburner.getActionCurrentLevel("Operations",operations[i]);
+			est_chance = ns.bladeburner.getActionEstimatedSuccessChance("Operations",operations[i]);
+			delay_time = ns.bladeburner.getActionTime("Operations",operations[i]);
+			ns.printf(
+				"max lvl: %d cur lvl: %d success min: %.3g max: %.3g time %s %s",
+				max_lvl,
+				curr_lvl,
+				est_chance[0],est_chance[1],
+				timeFormat(delay_time),
+				operations[i]
+			);
+			if(est_chance[0]>0.8){
+				ops_test=true;
+				ns.bladeburner.startAction("Operations",operations[i]);
+				await delay(delay_time);
+				ns.bladeburner.setActionAutolevel("Operations",operations[i],true);
+			}else{
+				ns.bladeburner.setActionAutolevel("Operations",operations[i],false);
+				ns.bladeburner.setActionLevel("Operations",operations[i], Math.max(curr_lvl-1,1))
+			}
+		}
 		//contracts
-		min_lvl =-1;
 		ns.print(contracts);
 		for(i=0;i<contracts.length;i++){
 			ns.bladeburner.setActionAutolevel("Contracts",contracts[i],true);
@@ -125,31 +155,44 @@ export async function main(ns) {
 				timeFormat(delay_time),
 				contracts[i]
 			);
-			if(est_chance[0]>0.8){
+			if(!ops_test && est_chance[0]>=0.8){
+				contract_test=true;
 				ns.bladeburner.startAction("Contracts",contracts[i])
 				await delay(delay_time);
+				ns.bladeburner.setActionAutolevel("Contracts",contracts[i],true);
+			}else if(!ops_test && est_chance[0]<0.8){
+				ns.bladeburner.setActionAutolevel("Contracts",contracts[i],false);
+				ns.bladeburner.setActionLevel("Contracts",contracts[i], Math.max(curr_lvl-1,1))
 			}
 		}
-		//operations
-		min_lvl =-1;
-		for(i=0;i<operations.length;i++){
-			ns.bladeburner.setActionAutolevel("Operations",operations[i],true);
-			max_lvl = ns.bladeburner.getActionMaxLevel("Operations",operations[i]);
-			curr_lvl = ns.bladeburner.getActionCurrentLevel("Operations",operations[i]);
-			est_chance = ns.bladeburner.getActionEstimatedSuccessChance("Operations",operations[i]);
-			delay_time = ns.bladeburner.getActionTime("Operations",operations[i]);
-			ns.printf(
-				"max lvl: %d cur lvl: %d success min: %.3g max: %.3g time %s %s",
-				max_lvl,
-				curr_lvl,
-				est_chance[0],est_chance[1],
-				timeFormat(delay_time),
-				operations[i]
-			);
-			if(est_chance[0]>0.8){
-				ns.bladeburner.startAction("Operations",operations[i]);
-				await delay(delay_time);
-			}
+		//recruitment
+		est_chance = ns.bladeburner.getActionEstimatedSuccessChance("General","Recruitment");
+		if(est_chance>0.8){
+			delay_time = ns.bladeburner.getActionTime("General","Recruitment");
+			ns.bladeburner.startAction("General","Recruitment");
+			await delay(delay_time);
+		}
+		//training
+		if(!ops_test || (!ops_test && !contract_test)){
+			delay_time = ns.bladeburner.getActionTime("General","Training");
+			ns.bladeburner.startAction("General","Training")
+			await delay(delay_time);
+		}
+		city = ns.bladeburner.getCity();
+		//field action
+		max_lvl = ns.bladeburner.getActionMaxLevel("Operations",operations[0]);
+		while(ns.bladeburner.getCityEstimatedPopulation(city)<Math.pow(10,6)){
+			delay_time = ns.bladeburner.getActionTime("General","Field Analysis");
+			ns.bladeburner.startAction("General","Field Analysis");
+			await delay(delay_time);
+		}
+		//move city
+		if(ns.bladeburner.getCityCommunities(ns.bladeburner.getCity())<1){
+			ns.print(citys);
+			next_city = citys.at(citys.indexOf(city)+1);
+			ns.printf("current city %s, next city %s",
+			city, next_city);
+			ns.bladeburner.switchCity(next_city);
 		}
 		//upgrade skills
 		ns.printf("current skill points: %d",ns.bladeburner.getSkillPoints())
