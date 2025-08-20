@@ -72,11 +72,11 @@ export async function main(ns) {
 	let city, next_city;
 	let est_pop, city_com,city_chaos;
 	let delay_time,i, ops_test, contract_test;
-	ns.enableLog("bladeburner.getCity")
-	ns.enableLog("bladeburner.getCityCommunities")
-	ns.enableLog("bladeburner.getCityEstimatedPopulation")
-	ns.enableLog("bladeburner.getCityChaos")
-	ns.enableLog("bladeburner.startAction")
+	// ns.enableLog("bladeburner.getCity")
+	// ns.enableLog("bladeburner.getCityCommunities")
+	// ns.enableLog("bladeburner.getCityEstimatedPopulation")
+	// ns.enableLog("bladeburner.getCityChaos")
+	// ns.enableLog("bladeburner.startAction")
 	while(true){
 		ops_test=false;
 		contract_test=false;
@@ -122,7 +122,7 @@ export async function main(ns) {
 			est_chance = ns.bladeburner.getActionEstimatedSuccessChance("Operations",operations[i]);
 			delay_time = ns.bladeburner.getActionTime("Operations",operations[i]);
 			ns.printf(
-				"max lvl: %d cur lvl: %d success min: %.3g max: %.3g time %s %s",
+				"max lvl: %d cur lvl: %d success min: %.3g max: %.3g time %s Operations: %s",
 				max_lvl,
 				curr_lvl,
 				est_chance[0],est_chance[1],
@@ -148,7 +148,7 @@ export async function main(ns) {
 			est_chance = ns.bladeburner.getActionEstimatedSuccessChance("Contracts",contracts[i]);
 			delay_time = ns.bladeburner.getActionTime("Contracts",	contracts[i]);
 			ns.printf(
-				"max lvl: %d cur lvl: %d success min: %.3g max: %.3g time %s %s",
+				"max lvl: %d cur lvl: %d success min: %.3g max: %.3g time %s Contracts: %s",
 				max_lvl,
 				curr_lvl,
 				est_chance[0], est_chance[1],
@@ -177,11 +177,13 @@ export async function main(ns) {
 			delay_time = ns.bladeburner.getActionTime("General","Training");
 			ns.bladeburner.startAction("General","Training")
 			await delay(delay_time);
+			//field action
+			ns.bladeburner.startAction("General","Field Analysis");
+			await delay(delay_time);
 		}
 		city = ns.bladeburner.getCity();
 		//field action
-		max_lvl = ns.bladeburner.getActionMaxLevel("Operations",operations[0]);
-		while(ns.bladeburner.getCityEstimatedPopulation(city)<Math.pow(10,6)){
+		while(ns.bladeburner.getCityEstimatedPopulation(city)<Math.pow(10,7)){
 			delay_time = ns.bladeburner.getActionTime("General","Field Analysis");
 			ns.bladeburner.startAction("General","Field Analysis");
 			await delay(delay_time);
@@ -189,7 +191,11 @@ export async function main(ns) {
 		//move city
 		if(ns.bladeburner.getCityCommunities(ns.bladeburner.getCity())<1){
 			ns.print(citys);
-			next_city = citys.at(citys.indexOf(city)+1);
+			if(citys.indexOf(city)==(citys.length-1)){
+				next_city = citys[0];
+			}else{
+				next_city = citys.at(citys.indexOf(city)+1);
+			}
 			ns.printf("current city %s, next city %s",
 			city, next_city);
 			ns.bladeburner.switchCity(next_city);
